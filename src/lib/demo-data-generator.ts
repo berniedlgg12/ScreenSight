@@ -96,8 +96,9 @@ export function getVirtualDemoData() {
         
         // Generamos ~56 tiendas por estado para llegar a ~1,800
         for (let i = 0; i < 56; i++) {
-            const storeIdx = stateIndex * 100 + i;
-            const storeId = `ST-${state.substring(0, 3).toUpperCase()}-${i.toString().padStart(3, '0')}`;
+            // CRITICAL: unique prefix using stateIndex to avoid ID collisions between states like "Baja California"
+            const statePrefix = state.substring(0, 3).toUpperCase();
+            const storeId = `ST-${stateIndex.toString().padStart(2, '0')}-${statePrefix}-${i.toString().padStart(3, '0')}`;
             
             stores.push({
                 id: storeId,
@@ -111,7 +112,7 @@ export function getVirtualDemoData() {
                 createdAt: Date.now()
             });
 
-            // Generamos dispositivos solo para una muestra (Primeras 250 tiendas para no saturar memoria)
+            // Generamos dispositivos solo para una muestra controlada para no saturar memoria
             if (stores.length < 250) { 
                 for (let j = 0; j < 3; j++) {
                     const rand = Math.random();

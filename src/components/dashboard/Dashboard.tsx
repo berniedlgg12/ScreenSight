@@ -237,7 +237,7 @@ export function Dashboard() {
                   <SelectContent>
                       <SelectItem value="all">All Retail Nodes</SelectItem>
                       {filteredStores.slice(0, 100).map(s => (
-                          <SelectItem key={s.id} value={s.id}>{s.name} ({s.id})</SelectItem>
+                          <SelectItem key={`${s.id}-${s.name}`} value={s.id}>{s.name} ({s.id})</SelectItem>
                       ))}
                   </SelectContent>
               </Select>
