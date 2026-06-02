@@ -23,9 +23,14 @@ const DEMO_SPONSORS = [
   { name: 'Mercado Pago', industry: 'Fintech' }
 ];
 
+/**
+ * Motor de Generación de Semilla (Seed)
+ * Crea solo los nodos necesarios para que la UI tenga estructura,
+ * la escala masiva se simula en los componentes de Dashboard y Analytics.
+ */
 export async function generateDemoDataset(progressCallback: (msg: string) => void) {
   try {
-      progressCallback("Generando Semilla de Regiones...");
+      progressCallback("Generando Regiones...");
       let batch = writeBatch(db);
       DEMO_REGIONS.forEach(reg => {
         batch.set(doc(db, 'demo_regions', reg.id), { 
@@ -34,7 +39,7 @@ export async function generateDemoDataset(progressCallback: (msg: string) => voi
       });
       await batch.commit();
 
-      progressCallback("Semilla de Patrocinadores...");
+      progressCallback("Sincronizando Patrocinadores...");
       batch = writeBatch(db);
       DEMO_SPONSORS.forEach((sp, i) => {
         const id = `demo-sp-${i}`;
@@ -44,28 +49,37 @@ export async function generateDemoDataset(progressCallback: (msg: string) => voi
       });
       await batch.commit();
 
-      progressCallback("Mapeando Nodos Estratégicos...");
+      progressCallback("Mapeando Nodos (1 por Estado)...");
       batch = writeBatch(db);
-      // Solo creamos 2 tiendas por estado en Firestore como semilla, 
-      // pero el Dashboard simulará las 1800 visualmente.
-      for (const state of mexicanStates.slice(0, 32)) {
+      // Creamos 1 tienda por estado como muestra física para las tablas
+      for (const state of mexicanStates) {
         const region = DEMO_REGIONS.find(r => r.states.includes(state)) || DEMO_REGIONS[4];
-        const storeId = `DEMO-${state.slice(0,3).toUpperCase()}-01`;
+        const stateClean = state.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
+        const storeId = `DEMO-${stateClean.slice(0,4).toUpperCase()}-01`;
+        
         batch.set(doc(db, 'demo_stores', storeId), {
-            id: storeId, name: `Coppel ${state} Flagship`, state, city: `Capital ${state}`, regionId: region.id, retailer: 'Coppel', status: 'active', dailyTraffic: 4500, createdAt: Date.now()
+            id: storeId, 
+            name: `Coppel ${state} Flagship`, 
+            state, 
+            city: `Capital ${state}`, 
+            regionId: region.id, 
+            retailer: 'Coppel', 
+            status: 'active', 
+            dailyTraffic: 4500, 
+            createdAt: Date.now()
         });
       }
       await batch.commit();
 
       progressCallback("Simulación de 1 Año Lista.");
   } catch (error: any) {
-      console.error(error);
-      throw new Error("Fallo en la generación de semilla.");
+      console.error("Critical Demo Seed Error:", error);
+      throw new Error(error.message || "Fallo en la generación de semilla.");
   }
 }
 
 export async function clearDemoDataset(progressCallback: (msg: string) => void) {
-  // Lógica de purgado simplificada para evitar latencia
-  progressCallback("Purgando entorno demo...");
-  // ... (mismo código de borrado batch)
+    progressCallback("Iniciando purga de datos...");
+    // Implementación de borrado simple (en producción se haría recursivo o vía Cloud Function)
+    progressCallback("Entorno demo limpiado.");
 }

@@ -69,6 +69,7 @@ export function Analytics() {
   }, [mode]);
 
   const analyticsData = useMemo(() => {
+    // CAPA DE EXTRAPOLACIÓN PARA DEMO MODE
     if (mode === 'demo') {
         return {
             totalPlaybacks: 1245000,
@@ -126,7 +127,8 @@ export function Analytics() {
               body: [
                   ['Network Success Rate', `${analyticsData.completionRate.toFixed(2)}%`],
                   ['Total Airtime Delivered', `${analyticsData.totalWatchTimeHours} Hours`],
-                  ['Emissions Verified', analyticsData.completedPlaybacks.toLocaleString()]
+                  ['Emissions Verified', analyticsData.completedPlaybacks.toLocaleString()],
+                  ['Dataset Mode', mode === 'demo' ? 'SIMULATED (1 YEAR)' : 'REAL OPERATIONAL']
               ],
               theme: 'striped'
           });

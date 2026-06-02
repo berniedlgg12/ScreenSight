@@ -18,6 +18,7 @@ export function Dashboard() {
   const { mode } = useMode();
 
   const stats = useMemo(() => {
+    // CAPA DE EXTRAPOLACIÓN PARA DEMO MODE
     if (mode === 'demo') {
         return {
             totalScreens: 12450,
@@ -50,7 +51,7 @@ export function Dashboard() {
       estimatedRevenue: totalRevenue,
       uptime: devices.length > 0 ? `${((online / devices.length) * 100).toFixed(1)}%` : '0%'
     };
-  }, [devices, campaigns, playbackLogs, mode]);
+  }, [devices, campaigns, mode]);
 
   const chartData = useMemo(() => {
     if (mode === 'demo') {
@@ -75,12 +76,14 @@ export function Dashboard() {
   const regionalStats = useMemo(() => {
     if (mode === 'demo') {
         const demoRegions = [
-            { name: 'Noroeste', count: 1850, occupancy: '85%' },
             { name: 'CDMX / ZM', count: 3200, occupancy: '98%' },
-            { name: 'Bajío', count: 1450, occupancy: '76%' },
+            { name: 'Noroeste', count: 1850, occupancy: '85%' },
             { name: 'Occidente', count: 1600, occupancy: '92%' },
+            { name: 'Bajío', count: 1450, occupancy: '76%' },
             { name: 'Centro', count: 1200, occupancy: '68%' },
             { name: 'Sureste', count: 950, occupancy: '82%' },
+            { name: 'Noreste', count: 1100, occupancy: '88%' },
+            { name: 'Sur', count: 1100, occupancy: '70%' },
         ];
         return demoRegions.sort((a,b) => b.count - a.count);
     }
@@ -108,11 +111,11 @@ export function Dashboard() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-black tracking-tighter uppercase">Network Intelligence</h1>
+            <h1 className="text-4xl font-black tracking-tighter uppercase">Intelligence</h1>
             {mode === 'demo' && (
                 <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 px-3 py-1 rounded-full animate-in fade-in slide-in-from-left-4 duration-1000">
                     <FlaskConical className="h-3.5 w-3.5 text-orange-500" />
-                    <span className="text-[10px] font-black uppercase text-orange-500 tracking-widest">Demo Mode — Simulated 1-Year Deployment</span>
+                    <span className="text-[10px] font-black uppercase text-orange-500 tracking-widest">DEMO MODE — Simulated 1-Year Deployment</span>
                 </div>
             )}
           </div>
@@ -244,7 +247,7 @@ export function Dashboard() {
             <CardContent>
                 <div className="flex flex-col items-center justify-center py-10 gap-4">
                     <div className="text-4xl font-black text-emerald-500">
-                        {mode === 'demo' ? '1.2M+' : playbackLogs.filter(l => l.eventType === 'complete').length.toLocaleString()}
+                        {mode === 'demo' ? '1,182,000+' : playbackLogs.filter(l => l.eventType === 'complete').length.toLocaleString()}
                     </div>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Successful Airtime Hits</p>
                     <Button variant="outline" size="sm" asChild className="mt-2">
