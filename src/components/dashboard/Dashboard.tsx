@@ -7,30 +7,27 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ResponsiveContainer, Cell, PieChart, Pie, Tooltip } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, TrendingUp } from 'lucide-react';
+import { RefreshCw, TrendingUp, FlaskConical } from 'lucide-react';
 import Link from 'next/link';
 import { isDeviceOnline, getDeviceConnectionState } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { useMode } from '@/hooks/use-mode';
 
 export function Dashboard() {
   const { devices, campaigns, playbackLogs, regions, loading, refreshData } = useFleet();
+  const { mode } = useMode();
 
   const stats = useMemo(() => {
     const online = devices.filter(d => isDeviceOnline(d.lastHeartbeat)).length;
     const activeAds = campaigns.filter(c => c.status === 'active');
     
-    // Revenue is the sum of all campaign budgets
     const totalRevenue = campaigns.reduce((sum, c) => sum + (c.budget || 0), 0);
-    
-    // Total impressions are summed from campaign delivery fields (Real Telemetry)
     const totalImpressions = campaigns.reduce((sum, c) => sum + (c.deliveredImpressions || 0), 0);
-    
-    // Overall Pacing
     const totalGoal = campaigns.reduce((sum, c) => sum + (c.targetPlaybacks || 0), 0);
     const totalDelivered = campaigns.reduce((sum, c) => sum + (c.deliveredPlaybacks || 0), 0);
-    const pacing = totalGoal > 0 ? (totalDelivered / totalGoal) * 100 : 0;
+    const pacing = totalGoal > 0 ? (totalDelivered / totalGoal) * 100 : (mode === 'demo' ? 84.5 : 0);
 
-    // Fill rate estimation
-    const fillRate = Math.min(100, (activeAds.length * 15.5)); 
+    const fillRate = mode === 'demo' ? 89.2 : Math.min(100, (activeAds.length * 15.5)); 
 
     return {
       totalScreens: devices.length,
@@ -40,33 +37,41 @@ export function Dashboard() {
       pacing: `${pacing.toFixed(1)}%`,
       totalImpressions: totalImpressions,
       estimatedRevenue: totalRevenue,
-      uptime: devices.length > 0 ? `${((online / devices.length) * 100).toFixed(1)}%` : '0%'
+      uptime: devices.length > 0 ? `${((online / devices.length) * 100).toFixed(1)}%` : (mode === 'demo' ? '92.4%' : '0%')
     };
-  }, [devices, campaigns, playbackLogs]);
+  }, [devices, campaigns, playbackLogs, mode]);
 
   const chartData = useMemo(() => {
     const online = devices.filter(d => getDeviceConnectionState(d.lastHeartbeat) === 'online').length;
     const unstable = devices.filter(d => getDeviceConnectionState(d.lastHeartbeat) === 'unstable').length;
     const offline = devices.filter(d => getDeviceConnectionState(d.lastHeartbeat) === 'offline').length;
 
+    if (mode === 'demo' && devices.length === 0) {
+        return [
+            { name: 'Healthy', value: 4620 },
+            { name: 'Unstable', value: 250 },
+            { name: 'Offline', value: 130 }
+        ];
+    }
+
     return [
       { name: 'Healthy', value: online },
       { name: 'Unstable', value: unstable },
       { name: 'Offline', value: offline }
     ];
-  }, [devices]);
+  }, [devices, mode]);
 
   const regionalStats = useMemo(() => {
     return regions.map(r => {
         const regionDevices = devices.filter(d => d.regionId === r.id);
-        const occupancy = Math.min(100, (regionDevices.length * 8) + 40); 
+        const occupancy = mode === 'demo' ? (Math.random() * 20 + 75) : Math.min(100, (regionDevices.length * 8) + 40); 
         return {
             name: r.name,
             count: regionDevices.length,
             occupancy: `${occupancy}%`
         };
     }).sort((a,b) => b.count - a.count);
-  }, [regions, devices]);
+  }, [regions, devices, mode]);
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-[80vh] gap-4">
@@ -78,8 +83,16 @@ export function Dashboard() {
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-muted/20 min-h-screen">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-black tracking-tighter uppercase">Network Intelligence</h1>
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-black tracking-tighter uppercase">Network Intelligence</h1>
+            {mode === 'demo' && (
+                <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 px-3 py-1 rounded-full animate-in fade-in slide-in-from-left-4 duration-1000">
+                    <FlaskConical className="h-3.5 w-3.5 text-orange-500" />
+                    <span className="text-[10px] font-black uppercase text-orange-500 tracking-widest">Demo Mode — Simulated 1-Year Deployment</span>
+                </div>
+            )}
+          </div>
           <p className="text-muted-foreground font-medium">Global AdOps Performance & Telemetry NOC</p>
         </div>
         <div className="flex items-center gap-2">
@@ -104,7 +117,7 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-                {campaigns.filter(c => c.status === 'active').slice(0, 5).map(campaign => {
+                {campaigns.filter(c => c.status === 'active').slice(0, 6).map(campaign => {
                     const progress = (campaign.deliveredPlaybacks / (campaign.targetPlaybacks || 1)) * 100;
                     return (
                         <div key={campaign.id} className="space-y-2">
@@ -190,7 +203,7 @@ export function Dashboard() {
                             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                                 <div className="h-full bg-primary/60" style={{ width: reg.occupancy }} />
                             </div>
-                            <span className="w-16 text-right font-mono font-bold text-xs text-primary">{reg.count} TVs</span>
+                            <span className="w-20 text-right font-mono font-bold text-xs text-primary">{reg.count || (mode === 'demo' ? Math.floor(Math.random() * 400 + 200) : 0)} TVs</span>
                         </div>
                     )) : (
                         <p className="text-center py-10 text-muted-foreground italic text-xs">No regions initialized.</p>
@@ -207,7 +220,7 @@ export function Dashboard() {
             <CardContent>
                 <div className="flex flex-col items-center justify-center py-10 gap-4">
                     <div className="text-4xl font-black text-emerald-500">
-                        {playbackLogs.filter(l => l.eventType === 'complete').length.toLocaleString()}
+                        {mode === 'demo' ? '1.2M+' : playbackLogs.filter(l => l.eventType === 'complete').length.toLocaleString()}
                     </div>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Successful Airtime Hits</p>
                     <Button variant="outline" size="sm" asChild className="mt-2">

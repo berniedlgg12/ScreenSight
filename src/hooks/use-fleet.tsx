@@ -5,6 +5,7 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Device, Store, Sponsor, Region, Campaign, PlaybackLog } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useMode } from './use-mode';
 
 interface FleetContextType {
   devices: Device[];
@@ -15,12 +16,13 @@ interface FleetContextType {
   playbackLogs: PlaybackLog[];
   loading: boolean;
   refreshData: () => void;
-  now: number; // Exposing current time for dynamic status calculations
+  now: number;
 }
 
 const FleetContext = createContext<FleetContextType | undefined>(undefined);
 
 export function FleetProvider({ children }: { children: ReactNode }) {
+  const { mode } = useMode();
   const [devices, setDevices] = useState<Device[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
@@ -31,36 +33,44 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   const [now, setNow] = useState(Date.now());
   const { toast } = useToast();
 
+  // Helper to get collection name based on mode
+  const col = (name: string) => mode === 'demo' ? `demo_${name}` : name;
+
   useEffect(() => {
     setLoading(true);
 
-    const unsubStores = onSnapshot(collection(db, 'stores'), (snapshot) => {
+    const unsubStores = onSnapshot(collection(db, col('stores')), (snapshot) => {
       setStores(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store)));
     });
 
-    const unsubDevices = onSnapshot(query(collection(db, 'devices'), orderBy('name', 'asc')), (snapshot) => {
+    const unsubDevices = onSnapshot(query(collection(db, col('devices')), orderBy('name', 'asc')), (snapshot) => {
       setDevices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Device)));
       setLoading(false);
     });
 
-    const unsubSponsors = onSnapshot(collection(db, 'sponsors'), (snapshot) => {
+    const unsubSponsors = onSnapshot(collection(db, col('sponsors')), (snapshot) => {
       setSponsors(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sponsor)));
     });
 
-    const unsubRegions = onSnapshot(collection(db, 'regions'), (snapshot) => {
+    const unsubRegions = onSnapshot(collection(db, col('regions')), (snapshot) => {
       setRegions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)));
     });
 
-    const unsubCampaigns = onSnapshot(collection(db, 'campaigns'), (snapshot) => {
+    const unsubCampaigns = onSnapshot(collection(db, col('campaigns')), (snapshot) => {
       setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Campaign)));
     });
 
-    const unsubLogs = onSnapshot(query(collection(db, 'playbackLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
-      setPlaybackLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+    const unsubLogs = onSnapshot(query(collection(db, col('playbackLogs')), orderBy('timestamp', 'desc')), (snapshot) => {
+      setPlaybackLogs(snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data,
+          timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp || Date.now())
+        } as any;
+      }));
     });
 
-    // Dynamic UI Refresh Timer (every 5 seconds)
-    // This forces components using useFleet to re-render and re-calculate isDeviceOnline
     const timer = setInterval(() => setNow(Date.now()), 5000);
 
     return () => {
@@ -72,11 +82,11 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       unsubLogs();
       clearInterval(timer);
     };
-  }, []);
+  }, [mode]);
 
   const refreshData = useCallback(() => {
-    toast({ title: 'Live Sync Active', description: 'Monitoring fleet real-time.' });
-  }, [toast]);
+    toast({ title: mode === 'demo' ? 'Demo Fleet Synced' : 'Live Fleet Synced', description: 'Telemetry updated.' });
+  }, [toast, mode]);
 
   return (
     <FleetContext.Provider value={{ devices, stores, sponsors, regions, campaigns, playbackLogs, loading, refreshData, now }}>
