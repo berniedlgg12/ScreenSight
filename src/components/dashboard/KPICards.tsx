@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tv, Target, Megaphone, DollarSign, Activity, Percent, BarChart3, TrendingUp } from 'lucide-react';
+import { useLanguage } from '@/hooks/use-language';
 
 interface KPICardsProps {
   stats: {
@@ -17,15 +18,17 @@ interface KPICardsProps {
 }
 
 export function KPICards({ stats }: KPICardsProps) {
+  const { t } = useLanguage();
+  
   const items = [
-    { title: 'Total Inventory', value: stats.totalScreens, icon: Tv, color: 'text-primary' },
-    { title: 'Network Uptime', value: stats.uptime, icon: Activity, color: 'text-green-500' },
-    { title: 'Fill Rate', value: stats.networkFillRate, icon: Percent, color: 'text-blue-500' },
-    { title: 'Active Ads', value: stats.activeCampaigns, icon: Megaphone, color: 'text-accent' },
-    { title: 'Impressions', value: stats.totalImpressions.toLocaleString(), icon: Target, color: 'text-purple-500' },
-    { title: 'Delivery Pacing', value: stats.pacing, icon: TrendingUp, color: 'text-amber-500' },
-    { title: 'Est. Revenue', value: `$${stats.estimatedRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-500' },
-    { title: 'Playback Logs', value: (stats.totalImpressions / 2.5).toLocaleString(), icon: BarChart3, color: 'text-muted-foreground' },
+    { title: t('totalInventory'), value: stats.totalScreens, icon: Tv, color: 'text-primary' },
+    { title: t('networkUptime'), value: stats.uptime, icon: Activity, color: 'text-green-500' },
+    { title: t('fillRate'), value: stats.networkFillRate, icon: Percent, color: 'text-blue-500' },
+    { title: t('activeAds'), value: stats.activeCampaigns, icon: Megaphone, color: 'text-accent' },
+    { title: t('impressions'), value: stats.totalImpressions.toLocaleString(), icon: Target, color: 'text-purple-500' },
+    { title: t('pacing'), value: stats.pacing, icon: TrendingUp, color: 'text-amber-500' },
+    { title: t('revenue'), value: `$${stats.estimatedRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-500' },
+    { title: t('playbackLogs'), value: (stats.totalImpressions / 2.5).toLocaleString(), icon: BarChart3, color: 'text-muted-foreground' },
   ];
 
   return (

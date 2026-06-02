@@ -12,11 +12,13 @@ import Link from 'next/link';
 import { isDeviceOnline, getDeviceConnectionState } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { useMode } from '@/hooks/use-mode';
+import { useLanguage } from '@/hooks/use-language';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function Dashboard() {
   const { devices, campaigns, stores, regions, playbackLogs, loading, refreshData } = useFleet();
   const { mode } = useMode();
+  const { t } = useLanguage();
 
   // Filter State
   const [regionFilter, setRegionFilter] = useState<string>('all');
@@ -28,7 +30,6 @@ export function Dashboard() {
   }, [stores, regionFilter]);
 
   const stats = useMemo(() => {
-    // --- LÓGICA PARA DEMO MODE ---
     if (mode === 'demo') {
         const demoRegions = [
             { id: 'cdmx-zm', name: 'CDMX / ZM', count: 3200, online: 3050, impressions: 15400000, revenue: 350000 },
@@ -69,7 +70,6 @@ export function Dashboard() {
         }
 
         if (storeFilter !== 'all') {
-            // Simulación nivel tienda
             base = {
                 totalScreens: 12,
                 onlineScreens: 11,
@@ -85,7 +85,6 @@ export function Dashboard() {
         return base;
     }
 
-    // --- LÓGICA PARA REAL MODE ---
     let filteredDevices = devices;
     if (regionFilter !== 'all') {
         filteredDevices = filteredDevices.filter(d => d.regionId === regionFilter);
@@ -129,9 +128,9 @@ export function Dashboard() {
         if (storeFilter !== 'all') { healthy = 11; unstable = 1; offline = 0; }
 
         return [
-            { name: 'Healthy', value: healthy },
-            { name: 'Unstable', value: unstable },
-            { name: 'Offline', value: offline }
+            { name: t('online'), value: healthy },
+            { name: t('unstable'), value: unstable },
+            { name: t('offline'), value: offline }
         ];
     }
 
@@ -144,11 +143,11 @@ export function Dashboard() {
     const offline = filteredDevices.filter(d => getDeviceConnectionState(d.lastHeartbeat) === 'offline').length;
 
     return [
-      { name: 'Healthy', value: online },
-      { name: 'Unstable', value: unstable },
-      { name: 'Offline', value: offline }
+      { name: t('online'), value: online },
+      { name: t('unstable'), value: unstable },
+      { name: t('offline'), value: offline }
     ];
-  }, [devices, mode, regionFilter, storeFilter]);
+  }, [devices, mode, regionFilter, storeFilter, t]);
 
   const regionalStats = useMemo(() => {
     if (mode === 'demo') {
@@ -193,7 +192,7 @@ export function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-black tracking-tighter uppercase">Intelligence</h1>
+            <h1 className="text-4xl font-black tracking-tighter uppercase">{t('intelligence')}</h1>
             {mode === 'demo' && (
                 <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 px-3 py-1 rounded-full animate-in fade-in slide-in-from-left-4 duration-1000">
                     <FlaskConical className="h-3.5 w-3.5 text-orange-500" />
@@ -213,11 +212,10 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* --- DASHBOARD FILTERS --- */}
       <div className="bg-background border border-primary/10 p-3 rounded-2xl shadow-sm flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Territory:</span>
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{t('territories')}:</span>
               <Select value={regionFilter} onValueChange={(v) => { setRegionFilter(v); setStoreFilter('all'); }}>
                   <SelectTrigger className="w-[180px] h-9 font-bold bg-muted/30 border-none shadow-none">
                       <SelectValue placeholder="All Territories" />
@@ -225,12 +223,6 @@ export function Dashboard() {
                   <SelectContent>
                       <SelectItem value="all">All Territories</SelectItem>
                       {regions.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                      {mode === 'demo' && [
-                          {id: 'cdmx-zm', name: 'CDMX / ZM'},
-                          {id: 'noroeste', name: 'Noroeste'},
-                          {id: 'bajio', name: 'Bajío'},
-                          {id: 'occidente', name: 'Occidente'}
-                      ].map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                   </SelectContent>
               </Select>
           </div>
@@ -247,9 +239,6 @@ export function Dashboard() {
                       {filteredStores.slice(0, 100).map(s => (
                           <SelectItem key={s.id} value={s.id}>{s.name} ({s.id})</SelectItem>
                       ))}
-                      {mode === 'demo' && regionFilter !== 'all' && (
-                          <SelectItem value="demo-st-1">Simulated Store 001</SelectItem>
-                      )}
                   </SelectContent>
               </Select>
           </div>
@@ -267,7 +256,7 @@ export function Dashboard() {
         <Card className="col-span-4 border-primary/20 bg-card/50">
           <CardHeader>
             <CardTitle className="text-lg font-black uppercase flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" /> Delivery Pacing
+                <TrendingUp className="h-5 w-5 text-primary" /> {t('pacing')}
             </CardTitle>
             <CardDescription>
                 {regionFilter === 'all' ? 'Network-wide' : `Targeting ${regions.find(r => r.id === regionFilter)?.name || 'Region'}`} campaign progress.
@@ -343,11 +332,11 @@ export function Dashboard() {
                      <p className="text-lg font-black text-emerald-500">{stats.uptime}</p>
                  </div>
                  <div>
-                     <p className="text-[9px] text-muted-foreground uppercase font-black">Fill Rate</p>
+                     <p className="text-[9px] text-muted-foreground uppercase font-black">{t('fillRate')}</p>
                      <p className="text-lg font-black text-primary">{stats.networkFillRate}</p>
                  </div>
                  <div>
-                     <p className="text-[9px] text-muted-foreground uppercase font-black">Revenue</p>
+                     <p className="text-[9px] text-muted-foreground uppercase font-black">{t('revenue')}</p>
                      <p className="text-lg font-black text-primary">${stats.estimatedRevenue.toLocaleString()}</p>
                  </div>
              </div>
@@ -383,7 +372,7 @@ export function Dashboard() {
         
         <Card className="border-primary/10">
             <CardHeader>
-                <CardTitle className="text-lg font-black uppercase">Proof of Play Audit</CardTitle>
+                <CardTitle className="text-lg font-black uppercase">{t('proofOfPlay')} Audit</CardTitle>
                 <CardDescription>Verified playback confirmations in the last 24h.</CardDescription>
             </CardHeader>
             <CardContent>

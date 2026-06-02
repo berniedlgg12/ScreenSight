@@ -23,17 +23,18 @@ import {
   Briefcase, 
   Tv,
   Target,
-  Gamepad2,
-  Database
+  Gamepad2
 } from 'lucide-react';
 import { UserMenu } from '@/components/dashboard/UserMenu';
 import { FleetProvider } from '@/hooks/use-fleet';
 import { ModeProvider, useMode } from '@/hooks/use-mode';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/hooks/use-language';
 
 function SidebarContentWithMode() {
   const pathname = usePathname();
   const { mode } = useMode();
+  const { t } = useLanguage();
 
   return (
     <>
@@ -66,89 +67,89 @@ function SidebarContentWithMode() {
         <SidebarMenu>
           <SidebarMenuItem>
             <Link href="/dashboard">
-              <SidebarMenuButton tooltip="Intelligence" isActive={pathname === '/dashboard'}>
+              <SidebarMenuButton tooltip={t('intelligence')} isActive={pathname === '/dashboard'}>
                 <LayoutDashboard className="text-primary" />
-                <span className="font-bold uppercase tracking-tight text-xs">Intelligence</span>
+                <span className="font-bold uppercase tracking-tight text-xs">{t('intelligence')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
           
-          <div className="px-4 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Operations</div>
+          <div className="px-4 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t('operations')}</div>
            <SidebarMenuItem>
             <Link href="/controles">
-              <SidebarMenuButton tooltip="Controles" isActive={pathname === '/controles'}>
+              <SidebarMenuButton tooltip={t('controls')} isActive={pathname === '/controles'}>
                 <Gamepad2 className="text-orange-500" />
-                <span className="font-bold uppercase tracking-tight text-xs">Controles</span>
+                <span className="font-bold uppercase tracking-tight text-xs">{t('controls')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
 
-          <div className="px-4 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Inventory</div>
+          <div className="px-4 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t('inventory')}</div>
           <SidebarMenuItem>
             <Link href="/screens">
-              <SidebarMenuButton tooltip="Displays" isActive={pathname === '/screens'}>
+              <SidebarMenuButton tooltip={t('displays')} isActive={pathname === '/screens'}>
                 <Tv />
-                <span>Displays</span>
+                <span>{t('displays')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/stores">
-              <SidebarMenuButton tooltip="Retail Nodes" isActive={pathname === '/stores'}>
+              <SidebarMenuButton tooltip={t('retailNodes')} isActive={pathname === '/stores'}>
                 <Store />
-                <span>Retail Nodes</span>
+                <span>{t('retailNodes')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/regions">
-              <SidebarMenuButton tooltip="Territories" isActive={pathname === '/regions'}>
+              <SidebarMenuButton tooltip={t('territories')} isActive={pathname === '/regions'}>
                 <Map />
-                <span>Territories</span>
+                <span>{t('territories')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
 
-          <div className="px-4 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">AdOps CMS</div>
+          <div className="px-4 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t('adOpsCms')}</div>
           <SidebarMenuItem>
             <Link href="/campaigns">
-              <SidebarMenuButton tooltip="Delivery Targets" isActive={pathname === '/campaigns'}>
+              <SidebarMenuButton tooltip={t('deliveryTargets')} isActive={pathname === '/campaigns'}>
                 <Target className="text-primary" />
-                <span className="font-bold uppercase tracking-tight text-xs">Delivery Targets</span>
+                <span className="font-bold uppercase tracking-tight text-xs">{t('deliveryTargets')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/media">
-              <SidebarMenuButton tooltip="Media Assets" isActive={pathname === '/media'}>
+              <SidebarMenuButton tooltip={t('mediaAssets')} isActive={pathname === '/media'}>
                 <Film />
-                <span>Media Assets</span>
+                <span>{t('mediaAssets')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/sponsors">
-              <SidebarMenuButton tooltip="Advertisers" isActive={pathname === '/sponsors'}>
+              <SidebarMenuButton tooltip={t('advertisers')} isActive={pathname === '/sponsors'}>
                 <Briefcase />
-                <span>Advertisers</span>
+                <span>{t('advertisers')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
 
-          <div className="px-4 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Proof of Play</div>
+          <div className="px-4 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t('proofOfPlay')}</div>
           <SidebarMenuItem>
             <Link href="/analytics">
-              <SidebarMenuButton tooltip="Telemetry" isActive={pathname === '/analytics'}>
+              <SidebarMenuButton tooltip={t('telemetry')} isActive={pathname === '/analytics'}>
                 <BarChart2 />
-                <span>Telemetry</span>
+                <span>{t('telemetry')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/settings">
-              <SidebarMenuButton tooltip="System" isActive={pathname === '/settings'}>
+              <SidebarMenuButton tooltip={t('system')} isActive={pathname === '/settings'}>
                 <Settings />
-                <span>System</span>
+                <span>{t('system')}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>

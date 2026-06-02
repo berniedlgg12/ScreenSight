@@ -9,13 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Monitor, Activity, ShieldCheck, Database, RefreshCcw, FlaskConical, AlertTriangle, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, Monitor, Activity, ShieldCheck, RefreshCcw, FlaskConical, Loader2 } from 'lucide-react';
 import { useMode } from '@/hooks/use-mode';
+import { useLanguage } from '@/hooks/use-language';
+import { Language } from '@/lib/translations';
 import { generateDemoDataset, clearDemoDataset } from '@/lib/demo-data-generator';
 
 export function Settings() {
     const { toast } = useToast();
     const { mode, setMode } = useMode();
+    const { language, setLanguage, t } = useLanguage();
     const [loading, setLoading] = useState(false);
     const [demoLoading, setDemoLoading] = useState(false);
     const [demoProgress, setDemoProgress] = useState("");
@@ -34,13 +37,11 @@ export function Settings() {
     const handleGenerateDemo = async () => {
         setDemoLoading(true);
         try {
-            // Ya no escribimos en Firestore, solo simulamos el proceso
             await generateDemoDataset((msg) => setDemoProgress(msg));
             toast({ 
                 title: "Simulación Activada", 
                 description: "La capa de inteligencia nacional de 1 año está lista." 
             });
-            // Persistimos que el dataset fue "inicializado" en local
             localStorage.setItem('screensight_demo_initialized', 'true');
         } catch (e: any) {
             toast({ 
@@ -72,26 +73,26 @@ export function Settings() {
     <Tabs defaultValue="general" className="space-y-6">
       <TabsList className="bg-muted/50 p-1 border">
         <TabsTrigger value="general" className="gap-2 px-6 font-bold uppercase text-[10px] tracking-widest">
-            <SettingsIcon className="h-3.5 w-3.5" /> General
+            <SettingsIcon className="h-3.5 w-3.5" /> {t('general')}
         </TabsTrigger>
         <TabsTrigger value="devices" className="gap-2 px-6 font-bold uppercase text-[10px] tracking-widest">
-            <Monitor className="h-3.5 w-3.5" /> Playback
+            <Monitor className="h-3.5 w-3.5" /> {t('playback')}
         </TabsTrigger>
         <TabsTrigger value="network" className="gap-2 px-6 font-bold uppercase text-[10px] tracking-widest">
-            <Activity className="h-3.5 w-3.5" /> Network
+            <Activity className="h-3.5 w-3.5" /> {t('network')}
         </TabsTrigger>
         <TabsTrigger value="demo" className="gap-2 px-6 font-bold uppercase text-[10px] tracking-widest text-orange-500">
-            <FlaskConical className="h-3.5 w-3.5" /> Demo Mode
+            <FlaskConical className="h-3.5 w-3.5" /> {t('demoMode')}
         </TabsTrigger>
         <TabsTrigger value="security" className="gap-2 px-6 font-bold uppercase text-[10px] tracking-widest">
-            <ShieldCheck className="h-3.5 w-3.5" /> AdOps Security
+            <ShieldCheck className="h-3.5 w-3.5" /> {t('security')}
         </TabsTrigger>
       </TabsList>
 
       <TabsContent value="general" className="space-y-4">
         <Card className="border-primary/10 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">Platform Identity</CardTitle>
+            <CardTitle className="text-lg font-bold">{t('platformIdentity')}</CardTitle>
             <CardDescription>Manage how ScreenSight appears across the organization.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -101,15 +102,17 @@ export function Settings() {
                     <Input id="platform-name" defaultValue="ScreenSight AdOps" className="font-bold" />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="timezone" className="text-xs uppercase font-black opacity-60">Master Timezone</Label>
-                    <Select defaultValue="America/Mexico_City">
-                        <SelectTrigger id="timezone" className="font-medium">
+                    <Label htmlFor="language" className="text-xs uppercase font-black opacity-60">{t('language')}</Label>
+                    <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
+                        <SelectTrigger id="language" className="font-medium">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="America/Mexico_City">Mexico City (CST)</SelectItem>
-                            <SelectItem value="America/Tijuana">Tijuana (PST)</SelectItem>
-                            <SelectItem value="America/Mazatlan">Mazatlan (MST)</SelectItem>
+                            <SelectItem value="en">English (US)</SelectItem>
+                            <SelectItem value="es">Español (ES)</SelectItem>
+                            <SelectItem value="fr">Français (FR)</SelectItem>
+                            <SelectItem value="hi">हिन्दी (Hindi)</SelectItem>
+                            <SelectItem value="zh">中文 (Mandarin)</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -208,7 +211,7 @@ export function Settings() {
       <div className="flex justify-end gap-4 pt-6 border-t">
           <Button variant="ghost" className="font-bold uppercase text-xs tracking-widest">Discard Changes</Button>
           <Button onClick={handleSave} disabled={loading} className="font-black uppercase text-xs tracking-widest px-8">
-            {loading ? 'Saving...' : 'Apply System Config'}
+            {loading ? 'Saving...' : t('saveChanges')}
           </Button>
       </div>
     </Tabs>
