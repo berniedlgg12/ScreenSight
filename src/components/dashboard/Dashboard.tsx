@@ -18,6 +18,19 @@ export function Dashboard() {
   const { mode } = useMode();
 
   const stats = useMemo(() => {
+    if (mode === 'demo') {
+        return {
+            totalScreens: 12450,
+            onlineScreens: 11520,
+            activeCampaigns: 42,
+            networkFillRate: '89.2%',
+            pacing: '94.5%',
+            totalImpressions: 48250600,
+            estimatedRevenue: 1245000,
+            uptime: '92.4%'
+        };
+    }
+
     const online = devices.filter(d => isDeviceOnline(d.lastHeartbeat)).length;
     const activeAds = campaigns.filter(c => c.status === 'active');
     
@@ -25,34 +38,32 @@ export function Dashboard() {
     const totalImpressions = campaigns.reduce((sum, c) => sum + (c.deliveredImpressions || 0), 0);
     const totalGoal = campaigns.reduce((sum, c) => sum + (c.targetPlaybacks || 0), 0);
     const totalDelivered = campaigns.reduce((sum, c) => sum + (c.deliveredPlaybacks || 0), 0);
-    const pacing = totalGoal > 0 ? (totalDelivered / totalGoal) * 100 : (mode === 'demo' ? 84.5 : 0);
-
-    const fillRate = mode === 'demo' ? 89.2 : Math.min(100, (activeAds.length * 15.5)); 
+    const pacing = totalGoal > 0 ? (totalDelivered / totalGoal) * 100 : 0;
 
     return {
       totalScreens: devices.length,
       onlineScreens: online,
       activeCampaigns: activeAds.length,
-      networkFillRate: `${fillRate.toFixed(1)}%`,
+      networkFillRate: `${Math.min(100, (activeAds.length * 15.5)).toFixed(1)}%`,
       pacing: `${pacing.toFixed(1)}%`,
       totalImpressions: totalImpressions,
       estimatedRevenue: totalRevenue,
-      uptime: devices.length > 0 ? `${((online / devices.length) * 100).toFixed(1)}%` : (mode === 'demo' ? '92.4%' : '0%')
+      uptime: devices.length > 0 ? `${((online / devices.length) * 100).toFixed(1)}%` : '0%'
     };
   }, [devices, campaigns, playbackLogs, mode]);
 
   const chartData = useMemo(() => {
+    if (mode === 'demo') {
+        return [
+            { name: 'Healthy', value: 11520 },
+            { name: 'Unstable', value: 650 },
+            { name: 'Offline', value: 280 }
+        ];
+    }
+
     const online = devices.filter(d => getDeviceConnectionState(d.lastHeartbeat) === 'online').length;
     const unstable = devices.filter(d => getDeviceConnectionState(d.lastHeartbeat) === 'unstable').length;
     const offline = devices.filter(d => getDeviceConnectionState(d.lastHeartbeat) === 'offline').length;
-
-    if (mode === 'demo' && devices.length === 0) {
-        return [
-            { name: 'Healthy', value: 4620 },
-            { name: 'Unstable', value: 250 },
-            { name: 'Offline', value: 130 }
-        ];
-    }
 
     return [
       { name: 'Healthy', value: online },
@@ -62,9 +73,21 @@ export function Dashboard() {
   }, [devices, mode]);
 
   const regionalStats = useMemo(() => {
+    if (mode === 'demo') {
+        const demoRegions = [
+            { name: 'Noroeste', count: 1850, occupancy: '85%' },
+            { name: 'CDMX / ZM', count: 3200, occupancy: '98%' },
+            { name: 'Bajío', count: 1450, occupancy: '76%' },
+            { name: 'Occidente', count: 1600, occupancy: '92%' },
+            { name: 'Centro', count: 1200, occupancy: '68%' },
+            { name: 'Sureste', count: 950, occupancy: '82%' },
+        ];
+        return demoRegions.sort((a,b) => b.count - a.count);
+    }
+
     return regions.map(r => {
         const regionDevices = devices.filter(d => d.regionId === r.id);
-        const occupancy = mode === 'demo' ? (Math.random() * 20 + 75) : Math.min(100, (regionDevices.length * 8) + 40); 
+        const occupancy = Math.min(100, (regionDevices.length * 8) + 40); 
         return {
             name: r.name,
             count: regionDevices.length,
@@ -117,31 +140,32 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-                {campaigns.filter(c => c.status === 'active').slice(0, 6).map(campaign => {
-                    const progress = (campaign.deliveredPlaybacks / (campaign.targetPlaybacks || 1)) * 100;
-                    return (
-                        <div key={campaign.id} className="space-y-2">
-                            <div className="flex justify-between text-[10px] font-black uppercase">
-                                <span>{campaign.brandName} — {campaign.name}</span>
-                                <span className={cn("font-mono", progress > 90 ? "text-emerald-500" : "text-primary")}>
-                                    {progress.toFixed(1)}% fulfilled
-                                </span>
-                            </div>
-                            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                                <div 
-                                    className={cn("h-full transition-all duration-1000", progress > 90 ? "bg-emerald-500" : "bg-primary")}
-                                    style={{ width: `${Math.min(100, progress)}%` }} 
-                                />
-                            </div>
+                {(mode === 'demo' ? [
+                    { brandName: 'Samsung', name: 'Galaxy S26 Launch', progress: 94.5 },
+                    { brandName: 'Telcel', name: 'Red 5G Nacional', progress: 82.1 },
+                    { brandName: 'Coca-Cola', name: 'Verano Coppel', progress: 99.2 },
+                    { brandName: 'Disney+', name: 'Family Plan Promo', progress: 45.6 },
+                    { brandName: 'Nike', name: 'Back to School', progress: 12.4 },
+                ] : campaigns.filter(c => c.status === 'active').slice(0, 5).map(c => ({
+                    brandName: c.brandName,
+                    name: c.name,
+                    progress: (c.deliveredPlaybacks / (c.targetPlaybacks || 1)) * 100
+                }))).map((campaign, idx) => (
+                    <div key={idx} className="space-y-2">
+                        <div className="flex justify-between text-[10px] font-black uppercase">
+                            <span>{campaign.brandName} — {campaign.name}</span>
+                            <span className={cn("font-mono", campaign.progress > 90 ? "text-emerald-500" : "text-primary")}>
+                                {campaign.progress.toFixed(1)}% fulfilled
+                            </span>
                         </div>
-                    );
-                })}
-                {campaigns.filter(c => c.status === 'active').length === 0 && (
-                    <div className="h-[200px] flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg gap-2">
-                        <TrendingUp className="h-8 w-8 opacity-20" />
-                        <p className="font-black uppercase text-[10px] tracking-widest opacity-40">No active campaigns tracking.</p>
+                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                            <div 
+                                className={cn("h-full transition-all duration-1000", campaign.progress > 90 ? "bg-emerald-500" : "bg-primary")}
+                                style={{ width: `${Math.min(100, campaign.progress)}%` }} 
+                            />
+                        </div>
                     </div>
-                )}
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -203,7 +227,7 @@ export function Dashboard() {
                             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                                 <div className="h-full bg-primary/60" style={{ width: reg.occupancy }} />
                             </div>
-                            <span className="w-20 text-right font-mono font-bold text-xs text-primary">{reg.count || (mode === 'demo' ? Math.floor(Math.random() * 400 + 200) : 0)} TVs</span>
+                            <span className="w-20 text-right font-mono font-bold text-xs text-primary">{reg.count.toLocaleString()} TVs</span>
                         </div>
                     )) : (
                         <p className="text-center py-10 text-muted-foreground italic text-xs">No regions initialized.</p>
