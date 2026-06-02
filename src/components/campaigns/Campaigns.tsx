@@ -133,7 +133,7 @@ export function Campaigns() {
               <CardHeader className="pb-2">
                   <CardTitle className="text-xs font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
                       <Target className="h-4 w-4" /> Active Delivery
-                  </Target>
+                  </CardTitle>
               </CardHeader>
               <CardContent>
                   <div className="text-2xl font-black">{globalStats.active}</div>
@@ -143,7 +143,7 @@ export function Campaigns() {
               <CardHeader className="pb-2">
                   <CardTitle className="text-xs font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
                       <Activity className="h-4 w-4" /> Network Pacing
-                  </Target>
+                  </CardTitle>
               </CardHeader>
               <CardContent>
                   <div className="text-2xl font-black">{globalStats.pacing.toFixed(1)}%</div>
@@ -153,7 +153,7 @@ export function Campaigns() {
               <CardHeader className="pb-2">
                   <CardTitle className="text-xs font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
                       <Megaphone className="h-4 w-4" /> Est. Revenue
-                  </Target>
+                  </CardTitle>
               </CardHeader>
               <CardContent>
                   <div className="text-2xl font-black">${globalStats.revenue.toLocaleString()}</div>
