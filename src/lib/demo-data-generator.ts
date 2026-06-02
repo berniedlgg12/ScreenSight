@@ -66,6 +66,7 @@ export function getVirtualDemoData() {
         email: `contact@${s.name.toLowerCase().replace(/\s/g, '')}.com`,
         phone: '555-000-0000',
         totalBudget: 1500000,
+        isInternal: s.name === 'Coppel', // Marcar Coppel como interno para fillers y ocultar botón de setup
         createdAt: Date.now()
     }));
 
@@ -96,7 +97,6 @@ export function getVirtualDemoData() {
         
         // Generamos ~56 tiendas por estado para llegar a ~1,800
         for (let i = 0; i < 56; i++) {
-            // CRITICAL: unique prefix using stateIndex to avoid ID collisions between states like "Baja California"
             const statePrefix = state.substring(0, 3).toUpperCase();
             const storeId = `ST-${stateIndex.toString().padStart(2, '0')}-${statePrefix}-${i.toString().padStart(3, '0')}`;
             
@@ -112,13 +112,14 @@ export function getVirtualDemoData() {
                 createdAt: Date.now()
             });
 
-            // Generamos dispositivos solo para una muestra controlada para no saturar memoria
-            if (stores.length < 250) { 
+            // Generamos dispositivos para una MUESTRA de cada estado (asegura que todas las regiones tengan TVs)
+            if (i < 8) { // Primeras 8 tiendas de CADA estado tendrán hardware en la demo
                 for (let j = 0; j < 3; j++) {
                     const rand = Math.random();
                     let lastHeartbeat = 0;
                     let healthTag = 'h-online';
 
+                    // Distribución estadística solicitada: 92% Verde, 5% Ámbar, 3% Rojo
                     if (rand < 0.92) {
                         lastHeartbeat = Date.now() - Math.floor(Math.random() * 25000);
                         healthTag = 'h-online';
@@ -164,11 +165,10 @@ export function getVirtualDemoData() {
         const statuses: Campaign['status'][] = ['active', 'active', 'completed', 'active', 'scheduled'];
         const status = statuses[i % statuses.length];
         
-        // Pacing realism
         let completion = 0.5;
         if (status === 'completed') completion = 1.0;
-        if (i % 3 === 0) completion = 0.94; // On track
-        if (i % 5 === 0) completion = 0.12; // Just started
+        if (i % 3 === 0) completion = 0.94;
+        if (i % 5 === 0) completion = 0.12;
         
         const targetPlays = 2000000;
         const deliveredPlays = Math.floor(targetPlays * completion);
