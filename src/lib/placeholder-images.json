@@ -1,0 +1,10 @@
+{
+  "placeholderImages": [
+    {
+      "id": "tv-placeholder-1",
+      "description": "Abstract background for TV display",
+      "imageUrl": "https://picsum.photos/seed/screensight1/1920/1080",
+      "imageHint": "abstract background"
+    }
+  ]
+}

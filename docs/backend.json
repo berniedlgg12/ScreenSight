@@ -1,0 +1,100 @@
+{
+  "entities": {
+    "Device": {
+      "title": "Device",
+      "description": "Represents a smart TV or screen in the fleet.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "storeId": { "type": "string" },
+        "status": { "type": "string", "enum": ["online", "offline"] },
+        "connectionStatus": { "type": "string", "enum": ["active", "error", "disconnected"] },
+        "resolution": { "type": "string" },
+        "orientation": { "type": "string", "enum": ["landscape", "portrait"] },
+        "todayStats": { "type": "object" }
+      }
+    },
+    "Store": {
+      "title": "Store",
+      "description": "A physical retail location hosting screens.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "retailer": { "type": "string" },
+        "regionId": { "type": "string" },
+        "state": { "type": "string" },
+        "city": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive", "maintenance"] }
+      }
+    },
+    "Region": {
+      "title": "Region",
+      "description": "Geographical grouping of stores with operational settings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "states": { "type": "array", "items": { "type": "string" } },
+        "enabled": { "type": "boolean" },
+        "playbackStart": { "type": "string" },
+        "playbackEnd": { "type": "string" },
+        "timezone": { "type": "string" }
+      }
+    },
+    "Sponsor": {
+      "title": "Sponsor",
+      "description": "An advertiser or brand paying for screen time.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "industry": { "type": "string" },
+        "negotiatedCPM": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "isInternal": { "type": "boolean" }
+      }
+    },
+    "Campaign": {
+      "title": "Campaign",
+      "description": "A DOOH advertising campaign.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "sponsorId": { "type": "string" },
+        "cpm": { "type": "number" },
+        "budget": { "type": "number" },
+        "targetImpressions": { "type": "number" },
+        "status": { "type": "string", "enum": ["draft", "scheduled", "active", "paused", "completed"] }
+      }
+    },
+    "GeneratedPlaylist": {
+      "title": "Generated Playlist",
+      "description": "A daily regional merged video package.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "regionId": { "type": "string" },
+        "date": { "type": "string" },
+        "mergedVideoUrl": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["email_password"]
+  },
+  "firestore": {
+    "/devices/{deviceId}": { "schema": { "$ref": "#/backend/entities/Device" }, "description": "Screen devices" },
+    "/stores/{storeId}": { "schema": { "$ref": "#/backend/entities/Store" }, "description": "Store locations" },
+    "/regions/{regionId}": { "schema": { "$ref": "#/backend/entities/Region" }, "description": "Territories" },
+    "/sponsors/{sponsorId}": { "schema": { "$ref": "#/backend/entities/Sponsor" }, "description": "Advertisers" },
+    "/campaigns/{campaignId}": { "schema": { "$ref": "#/backend/entities/Campaign" }, "description": "Ad campaigns" },
+    "/media/{mediaId}": { "schema": { "type": "object" }, "description": "Content library" },
+    "/playbackLogs/{logId}": { "schema": { "type": "object" }, "description": "Telemetry" },
+    "/generatedPlaylists/{playlistId}": { "schema": { "$ref": "#/backend/entities/GeneratedPlaylist" }, "description": "Regional packages" },
+    "/playback/{docId}": { "schema": { "type": "object" }, "description": "Sync configuration" }
+  }
+}
