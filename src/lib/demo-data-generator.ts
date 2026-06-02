@@ -4,7 +4,7 @@
  */
 
 import { mexicanStates } from './mexican-states';
-import type { Store, Device, Region, Sponsor, Campaign, PlaybackLog } from './types';
+import type { Store, Device, Region, Sponsor, Campaign } from './types';
 
 const DEMO_REGIONS = [
   { id: 'noroeste', name: 'Noroeste', states: ['Baja California', 'Baja California Sur', 'Sonora', 'Sinaloa'] },
@@ -53,14 +53,13 @@ export function getVirtualDemoData() {
     const stores: Store[] = [];
     const devices: Device[] = [];
     
-    let globalStoreIndex = 0;
-
+    // Generador de Tiendas (1,800 unidades distribuidas)
     mexicanStates.forEach((state, stateIndex) => {
         const region = DEMO_REGIONS.find(r => r.states.includes(state)) || DEMO_REGIONS[4];
         
+        // Generamos ~56 tiendas por estado para llegar a ~1,800
         for (let i = 0; i < 56; i++) {
-            globalStoreIndex++;
-            // Usamos un ID único combinando el índice del estado y el contador de tienda
+            // ID ÚNICO GARANTIZADO: DEMO-ST[IndexEstado]-N[IndexTienda]
             const storeId = `DEMO-ST${stateIndex.toString().padStart(2, '0')}-N${i.toString().padStart(3, '0')}`;
             
             stores.push({
@@ -75,19 +74,23 @@ export function getVirtualDemoData() {
                 createdAt: Date.now()
             });
 
-            // Generamos dispositivos de muestra para las primeras 200 tiendas
-            if (stores.length < 200) { 
-                for (let j = 0; j < 2; j++) {
+            // Generamos dispositivos solo para una muestra (Primeras 250 tiendas para no saturar memoria)
+            if (stores.length < 250) { 
+                for (let j = 0; j < 3; j++) {
                     const rand = Math.random();
                     let lastHeartbeat = 0;
                     
-                    // Definimos el estado inicial
+                    // Semáforo de salud estadística
+                    let healthTag = 'h-online';
                     if (rand < 0.92) {
                         lastHeartbeat = Date.now() - Math.floor(Math.random() * 20000);
+                        healthTag = 'h-online';
                     } else if (rand < 0.97) {
                         lastHeartbeat = Date.now() - (40000 + Math.floor(Math.random() * 10000));
+                        healthTag = 'h-unstable';
                     } else {
                         lastHeartbeat = Date.now() - (70000 + Math.floor(Math.random() * 1000000));
+                        healthTag = 'h-offline';
                     }
 
                     const deviceId = `${storeId}-TV${j + 1}`;
@@ -113,8 +116,7 @@ export function getVirtualDemoData() {
                         currentOffset: Math.random() * 540,
                         lastCommandStatus: 'success',
                         lastCommandReceived: `cmd-init-${deviceId}`,
-                        // Guardamos el tipo de salud original para el pulso del hook
-                        tags: [rand < 0.92 ? 'h-online' : rand < 0.97 ? 'h-unstable' : 'h-offline']
+                        tags: [healthTag] // Inyectamos el tag para el pulso en useFleet
                     } as any);
                 }
             }

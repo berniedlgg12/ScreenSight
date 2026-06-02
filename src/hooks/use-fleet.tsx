@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useEffect, ReactNode, useContext, useCallback, useMemo } from 'react';
+import { createContext, useState, useEffect, ReactNode, useContext, useCallback } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Device, Store, Sponsor, Region, Campaign, PlaybackLog } from '@/lib/types';
@@ -35,7 +35,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    // CAPA VIRTUAL PARA MODO DEMO
+    // CAPA VIRTUAL PARA MODO DEMO (Zero-Write)
     if (mode === 'demo') {
         setLoading(true);
         const virtualData = getVirtualDemoData();
@@ -93,22 +93,23 @@ export function FleetProvider({ children }: { children: ReactNode }) {
     };
   }, [mode]);
 
-  // PULSO DE SIMULACIÓN PARA MODO DEMO
-  // Mantiene los semáforos estables actualizando el heartbeat virtual relativo al tiempo actual
+  // MOTOR DE PULSO VIRTUAL (PULSE ENGINE)
+  // Mantiene los semáforos estables refrescando los latidos virtuales relativo al tiempo actual
   useEffect(() => {
     if (mode !== 'demo' || loading) return;
 
     const pulse = setInterval(() => {
         setDevices(prevDevices => prevDevices.map(device => {
-            const healthTag = device.tags?.[0]; // Usamos el tag que inyectamos en el generador
+            const healthTag = device.tags?.[0]; 
             let offset = 0;
             
+            // Re-calculamos un offset aleatorio pero dentro del rango para cada categoría
             if (healthTag === 'h-online') {
-                offset = Math.floor(Math.random() * 25000); // Mantiene < 35s
+                offset = Math.floor(Math.random() * 25000); // Mantiene Verde (< 35s)
             } else if (healthTag === 'h-unstable') {
-                offset = 40000 + Math.floor(Math.random() * 15000); // Mantiene entre 40s y 55s
+                offset = 40000 + Math.floor(Math.random() * 15000); // Mantiene Ámbar (40s - 55s)
             } else {
-                return device; // Offline se queda como está
+                return device; // Offline (Rojo) se queda igual (> 60s)
             }
 
             return {
@@ -116,7 +117,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
                 lastHeartbeat: Date.now() - offset
             };
         }));
-    }, 15000); // Pulso cada 15 segundos
+    }, 10000); // Pulso cada 10 segundos
 
     return () => clearInterval(pulse);
   }, [mode, loading]);
