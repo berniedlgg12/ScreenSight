@@ -28,7 +28,6 @@ const DEMO_SPONSORS_META = [
 ];
 
 export function getVirtualDemoData() {
-    // 1. Regiones
     const regions: Region[] = DEMO_REGIONS.map(r => ({
         ...r,
         enabled: true,
@@ -39,7 +38,6 @@ export function getVirtualDemoData() {
         autoResume: true
     }));
 
-    // 2. Sponsors
     const sponsors: Sponsor[] = DEMO_SPONSORS_META.map((s, i) => ({
         ...s,
         id: `demo-sp-${i}`,
@@ -52,15 +50,19 @@ export function getVirtualDemoData() {
         createdAt: Date.now()
     }));
 
-    // 3. Tiendas (1,800 distribuidas)
     const stores: Store[] = [];
     const devices: Device[] = [];
     
-    mexicanStates.forEach((state) => {
+    let globalStoreIndex = 0;
+
+    mexicanStates.forEach((state, stateIndex) => {
         const region = DEMO_REGIONS.find(r => r.states.includes(state)) || DEMO_REGIONS[4];
-        // Aproximadamente 56 tiendas por estado para llegar a ~1,800
+        
         for (let i = 0; i < 56; i++) {
-            const storeId = `DEMO-${state.slice(0,3).toUpperCase()}-${i.toString().padStart(3, '0')}`;
+            globalStoreIndex++;
+            // Usamos un ID único combinando el índice del estado y el contador de tienda
+            const storeId = `DEMO-ST${stateIndex.toString().padStart(2, '0')}-N${i.toString().padStart(3, '0')}`;
+            
             stores.push({
                 id: storeId,
                 name: `Coppel ${state} #${i + 1}`,
@@ -73,28 +75,26 @@ export function getVirtualDemoData() {
                 createdAt: Date.now()
             });
 
-            // Generamos dispositivos de muestra (solo para visualización de tablas)
-            // Solo para los primeros 250 tiendas para no colapsar la memoria del navegador
-            if (stores.length < 250) { 
+            // Generamos dispositivos de muestra para las primeras 200 tiendas
+            if (stores.length < 200) { 
                 for (let j = 0; j < 2; j++) {
                     const rand = Math.random();
                     let lastHeartbeat = 0;
                     
-                    // DISTRIBUCIÓN DE SALUD: 92% Verdes, 5% Amarillos, 3% Rojos
+                    // Definimos el estado inicial
                     if (rand < 0.92) {
-                        // ONLINE: Menos de 30 segundos de antigüedad
-                        lastHeartbeat = Date.now() - Math.floor(Math.random() * 25000);
+                        lastHeartbeat = Date.now() - Math.floor(Math.random() * 20000);
                     } else if (rand < 0.97) {
-                        // INESTABLE: Entre 40 y 55 segundos
-                        lastHeartbeat = Date.now() - (40000 + Math.floor(Math.random() * 15000));
+                        lastHeartbeat = Date.now() - (40000 + Math.floor(Math.random() * 10000));
                     } else {
-                        // OFFLINE: Más de 65 segundos
-                        lastHeartbeat = Date.now() - (65000 + Math.floor(Math.random() * 1000000));
+                        lastHeartbeat = Date.now() - (70000 + Math.floor(Math.random() * 1000000));
                     }
 
+                    const deviceId = `${storeId}-TV${j + 1}`;
+
                     devices.push({
-                        id: `${storeId}-TV${j+1}`,
-                        name: `Pantalla Pasillo ${j+1}`,
+                        id: deviceId,
+                        name: `Pantalla Pasillo ${j + 1}`,
                         storeId: storeId,
                         regionId: region.id,
                         status: lastHeartbeat > Date.now() - 60000 ? 'online' : 'offline',
@@ -109,17 +109,18 @@ export function getVirtualDemoData() {
                         currentContent: null,
                         resolution: '1920x1080',
                         orientation: 'landscape',
-                        driftSeconds: Math.random() * 1.8,
+                        driftSeconds: Math.random() * 1.5,
                         currentOffset: Math.random() * 540,
                         lastCommandStatus: 'success',
-                        lastCommandReceived: `cmd-init-${storeId}`
+                        lastCommandReceived: `cmd-init-${deviceId}`,
+                        // Guardamos el tipo de salud original para el pulso del hook
+                        tags: [rand < 0.92 ? 'h-online' : rand < 0.97 ? 'h-unstable' : 'h-offline']
                     } as any);
                 }
             }
         }
     });
 
-    // 4. Campañas
     const campaigns: Campaign[] = sponsors.map((sp, i) => ({
         id: `demo-camp-${i}`,
         name: `${sp.name} - Campaña Nacional 2025`,

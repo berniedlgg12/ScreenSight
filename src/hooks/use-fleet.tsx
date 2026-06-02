@@ -44,7 +44,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
         setStores(virtualData.stores);
         setDevices(virtualData.devices);
         setCampaigns(virtualData.campaigns);
-        setPlaybackLogs([]); // Los logs se simulan en los componentes de analytics
+        setPlaybackLogs([]); 
         setLoading(false);
         return;
     }
@@ -93,8 +93,38 @@ export function FleetProvider({ children }: { children: ReactNode }) {
     };
   }, [mode]);
 
-  const timer = setInterval(() => setNow(Date.now()), 5000);
-  useEffect(() => () => clearInterval(timer), []);
+  // PULSO DE SIMULACIÓN PARA MODO DEMO
+  // Mantiene los semáforos estables actualizando el heartbeat virtual relativo al tiempo actual
+  useEffect(() => {
+    if (mode !== 'demo' || loading) return;
+
+    const pulse = setInterval(() => {
+        setDevices(prevDevices => prevDevices.map(device => {
+            const healthTag = device.tags?.[0]; // Usamos el tag que inyectamos en el generador
+            let offset = 0;
+            
+            if (healthTag === 'h-online') {
+                offset = Math.floor(Math.random() * 25000); // Mantiene < 35s
+            } else if (healthTag === 'h-unstable') {
+                offset = 40000 + Math.floor(Math.random() * 15000); // Mantiene entre 40s y 55s
+            } else {
+                return device; // Offline se queda como está
+            }
+
+            return {
+                ...device,
+                lastHeartbeat: Date.now() - offset
+            };
+        }));
+    }, 15000); // Pulso cada 15 segundos
+
+    return () => clearInterval(pulse);
+  }, [mode, loading]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const refreshData = useCallback(() => {
     toast({ title: mode === 'demo' ? 'Virtual Fleet Synced' : 'Live Fleet Synced', description: 'Telemetry updated.' });
