@@ -151,7 +151,7 @@ export function Settings() {
             <div className="space-y-4 pt-4 border-t border-orange-500/10">
                 <div className="flex flex-col gap-2">
                     <Label className="text-xs uppercase font-black opacity-60">Dataset Management</Label>
-                    <p className="text-xs text-muted-foreground">Inject simulated nodes and screens to test platform scalability.</p>
+                    <p className="text-muted-foreground">Inject simulated nodes and screens to test platform scalability.</p>
                 </div>
                 <div className="flex gap-4">
                     <Button 
