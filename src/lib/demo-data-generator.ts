@@ -56,7 +56,6 @@ export function getVirtualDemoData() {
     const stores: Store[] = [];
     const devices: Device[] = [];
     
-    let storeCounter = 1;
     mexicanStates.forEach((state) => {
         const region = DEMO_REGIONS.find(r => r.states.includes(state)) || DEMO_REGIONS[4];
         // Aproximadamente 56 tiendas por estado para llegar a ~1,800
@@ -75,20 +74,45 @@ export function getVirtualDemoData() {
             });
 
             // Generamos dispositivos de muestra (solo para visualización de tablas)
-            // Limitamos a 2 por tienda en memoria para no colapsar el DOM, pero el dashboard proyecta 12,450
-            if (stores.length < 500) { 
+            // Solo para los primeros 250 tiendas para no colapsar la memoria del navegador
+            if (stores.length < 250) { 
                 for (let j = 0; j < 2; j++) {
+                    const rand = Math.random();
+                    let lastHeartbeat = 0;
+                    
+                    // DISTRIBUCIÓN DE SALUD: 92% Verdes, 5% Amarillos, 3% Rojos
+                    if (rand < 0.92) {
+                        // ONLINE: Menos de 30 segundos de antigüedad
+                        lastHeartbeat = Date.now() - Math.floor(Math.random() * 25000);
+                    } else if (rand < 0.97) {
+                        // INESTABLE: Entre 40 y 55 segundos
+                        lastHeartbeat = Date.now() - (40000 + Math.floor(Math.random() * 15000));
+                    } else {
+                        // OFFLINE: Más de 65 segundos
+                        lastHeartbeat = Date.now() - (65000 + Math.floor(Math.random() * 1000000));
+                    }
+
                     devices.push({
                         id: `${storeId}-TV${j+1}`,
                         name: `Pantalla Pasillo ${j+1}`,
                         storeId: storeId,
                         regionId: region.id,
-                        status: Math.random() > 0.05 ? 'online' : 'offline',
+                        status: lastHeartbeat > Date.now() - 60000 ? 'online' : 'offline',
                         connectionStatus: 'active',
-                        lastHeartbeat: Date.now() - Math.floor(Math.random() * 30000),
+                        lastHeartbeat: lastHeartbeat,
                         playbackMode: 'regional-merged',
-                        todayStats: { totalPlaybacks: Math.floor(Math.random() * 400), lastPlaybackTime: Date.now() },
-                        currentContent: null
+                        currentPlaybackMode: 'regional-merged',
+                        todayStats: { 
+                            totalPlaybacks: Math.floor(Math.random() * 400) + 100, 
+                            lastPlaybackTime: Date.now() 
+                        },
+                        currentContent: null,
+                        resolution: '1920x1080',
+                        orientation: 'landscape',
+                        driftSeconds: Math.random() * 1.8,
+                        currentOffset: Math.random() * 540,
+                        lastCommandStatus: 'success',
+                        lastCommandReceived: `cmd-init-${storeId}`
                     } as any);
                 }
             }
@@ -122,9 +146,11 @@ export function getVirtualDemoData() {
 
 export async function generateDemoDataset(progressCallback: (msg: string) => void) {
     progressCallback("Preparando simulación virtual...");
-    await new Promise(r => setTimeout(r, 1000));
-    progressCallback("Calculando topología de 1,800 nodos...");
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 600));
+    progressCallback("Configurando 1,800 nodos nacionales...");
+    await new Promise(r => setTimeout(r, 500));
+    progressCallback("Calculando salud de 12,450 pantallas...");
+    await new Promise(r => setTimeout(r, 700));
     progressCallback("Simulación Nacional Lista.");
 }
 
