@@ -15,7 +15,7 @@ import { useMode } from '@/hooks/use-mode';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function Dashboard() {
-  const { devices, campaigns, stores, regions, loading, refreshData } = useFleet();
+  const { devices, campaigns, stores, regions, playbackLogs, loading, refreshData } = useFleet();
   const { mode } = useMode();
 
   // Filter State
@@ -389,7 +389,13 @@ export function Dashboard() {
             <CardContent>
                 <div className="flex flex-col items-center justify-center py-10 gap-4">
                     <div className="text-4xl font-black text-emerald-500">
-                        {mode === 'demo' ? (regionFilter === 'all' ? '1,182,000+' : '145,000+') : (regionFilter === 'all' ? playbackLogs.filter(l => l.eventType === 'complete').length.toLocaleString() : playbackLogs.filter(l => l.eventType === 'complete' && l.regionId === regionFilter).length.toLocaleString())}
+                        {mode === 'demo' ? 
+                            (regionFilter === 'all' ? '1,182,000+' : '145,000+') : 
+                            (regionFilter === 'all' ? 
+                                playbackLogs.filter(l => l.eventType === 'complete').length.toLocaleString() : 
+                                playbackLogs.filter(l => l.eventType === 'complete' && l.regionId === regionFilter).length.toLocaleString()
+                            )
+                        }
                     </div>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Successful Airtime Hits</p>
                     <Button variant="outline" size="sm" asChild className="mt-2">
