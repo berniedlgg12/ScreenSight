@@ -27,135 +27,145 @@ const DEMO_SPONSORS = [
 ];
 
 export async function generateDemoDataset(progressCallback: (msg: string) => void) {
-  const batchSize = 400; 
+  const batchSize = 100; // Reducido para mayor estabilidad
   
   try {
-      // 1. Regions
-      progressCallback("Generating Regions...");
-      let batch = writeBatch(db);
+      // 1. Regiones
+      progressCallback("Generando Regiones...");
+      let regionBatch = writeBatch(db);
       DEMO_REGIONS.forEach(reg => {
         const ref = doc(db, 'demo_regions', reg.id);
-        batch.set(ref, { ...reg, enabled: true, playbackStart: "08:00", playbackEnd: "22:00", timezone: "America/Mexico_City", createdAt: Date.now() });
+        regionBatch.set(ref, { 
+            ...reg, 
+            enabled: true, 
+            playbackStart: "08:00", 
+            playbackEnd: "22:00", 
+            timezone: "America/Mexico_City", 
+            createdAt: Date.now() 
+        });
       });
-      await batch.commit();
+      await regionBatch.commit();
 
       // 2. Sponsors
-      progressCallback("Generating Brands...");
-      batch = writeBatch(db);
+      progressCallback("Configurando Patrocinadores...");
+      let sponsorBatch = writeBatch(db);
       const sponsorIds: string[] = [];
       DEMO_SPONSORS.forEach((sp, i) => {
         const id = `demo-sp-${i}`;
         sponsorIds.push(id);
         const ref = doc(db, 'demo_sponsors', id);
-        batch.set(ref, { ...sp, id, negotiatedCPM: 18.5, status: 'active', createdAt: Date.now() });
+        sponsorBatch.set(ref, { ...sp, id, negotiatedCPM: 18.5, status: 'active', createdAt: Date.now() });
       });
-      await batch.commit();
+      await sponsorBatch.commit();
 
-      // 3. Stores (1,800)
-      progressCallback("Building 1,800 Stores across Mexico...");
-      const storesPerState = Math.floor(1800 / 32);
-      let storeCount = 0;
+      // 3. Tiendas (Reducido a 500 para el MVP inicial si 1800 falla, pero mantendremos la lógica escalable)
+      progressCallback("Mapeando 1,800 Nodos en México...");
+      const storesPerState = 56; // 56 * 32 = 1792 aprox
+      let totalStoresCreated = 0;
       let currentBatch = writeBatch(db);
       const storeIds: string[] = [];
 
       for (const state of mexicanStates) {
         const region = DEMO_REGIONS.find(r => r.states.includes(state)) || DEMO_REGIONS[4];
+        const stateCode = state.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0,3).toUpperCase();
+
         for (let i = 1; i <= storesPerState; i++) {
-          const sanitizedState = state.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0,3).toUpperCase();
-          const storeId = `${sanitizedState}-${i.toString().padStart(3, '0')}`;
+          const storeId = `${stateCode}-${i.toString().padStart(3, '0')}`;
           storeIds.push(storeId);
           const ref = doc(db, 'demo_stores', storeId);
+          
           currentBatch.set(ref, {
             id: storeId,
             name: `Coppel ${state} ${i}`,
             state,
-            city: 'Simulated City',
+            city: `Ciudad ${stateCode}`,
             regionId: region.id,
             status: 'active',
             dailyTraffic: Math.floor(Math.random() * 2000) + 500,
             createdAt: Date.now()
           });
-          storeCount++;
+          
+          totalStoresCreated++;
 
-          if (storeCount % batchSize === 0) {
+          if (totalStoresCreated % batchSize === 0) {
             await currentBatch.commit();
             currentBatch = writeBatch(db);
-            progressCallback(`Stores created: ${storeCount}/1800`);
+            progressCallback(`Tiendas creadas: ${totalStoresCreated} / 1800`);
           }
         }
       }
       await currentBatch.commit();
 
-      // 4. Devices (approx 5,000)
-      progressCallback("Deploying 5,000 Smart TVs...");
+      // 4. Dispositivos (Solo crearemos 2000 reales para no saturar, el Dashboard los escalará visualmente)
+      progressCallback("Instalando Flota Digital...");
       let deviceCount = 0;
       currentBatch = writeBatch(db);
-      for (let i = 0; i < 5000; i++) {
+      
+      for (let i = 0; i < 2000; i++) {
         const storeId = storeIds[i % storeIds.length];
         const deviceId = `${storeId}-${(Math.floor(i/storeIds.length) + 1).toString().padStart(3, '0')}`;
         const ref = doc(db, 'demo_devices', deviceId);
         
         const rand = Math.random();
-        const status = rand > 0.08 ? 'online' : (rand > 0.03 ? 'unstable' : 'offline');
+        const isOnline = rand > 0.05;
 
         currentBatch.set(ref, {
           id: deviceId,
-          name: `TV ${i % 10 + 1}`,
+          name: `Display ${i % 5 + 1}`,
           storeId,
-          regionId: DEMO_REGIONS.find(r => r.states.some(s => storeId.startsWith(s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0,3).toUpperCase())))?.id || 'centro',
-          status: status === 'offline' ? 'offline' : 'online',
-          connectionStatus: status === 'online' ? 'active' : (status === 'unstable' ? 'error' : 'disconnected'),
-          lastHeartbeat: status === 'online' ? Date.now() - (Math.random() * 10000) : Date.now() - (Math.random() * 500000),
-          todayStats: { totalPlaybacks: Math.floor(Math.random() * 200) + 50 },
+          regionId: DEMO_REGIONS.find(r => r.id === storeId.split('-')[0])?.id || 'centro',
+          status: isOnline ? 'online' : 'offline',
+          connectionStatus: isOnline ? 'active' : 'disconnected',
+          lastHeartbeat: isOnline ? Date.now() - (Math.random() * 20000) : Date.now() - (Math.random() * 1000000),
+          todayStats: { totalPlaybacks: Math.floor(Math.random() * 150) + 50 },
           currentPlaybackMode: 'regional-merged',
           updatedAt: Date.now()
         });
+        
         deviceCount++;
 
         if (deviceCount % batchSize === 0) {
           await currentBatch.commit();
           currentBatch = writeBatch(db);
-          progressCallback(`Devices deployed: ${deviceCount}/5000`);
+          progressCallback(`Smart TVs activas: ${deviceCount} / 2000`);
         }
       }
       await currentBatch.commit();
 
-      // 5. Campaigns
-      progressCallback("Seeding Annual Campaigns...");
+      // 5. Campañas Anuales
+      progressCallback("Inyectando Historial de Campañas...");
       currentBatch = writeBatch(db);
-      for (let i = 0; i < 20; i++) {
-        const sponsorId = sponsorIds[i % sponsorIds.length];
+      for (let i = 0; i < 15; i++) {
         const sponsor = DEMO_SPONSORS[i % DEMO_SPONSORS.length];
         const id = `demo-camp-${i}`;
         const ref = doc(db, 'demo_campaigns', id);
         
-        const target = 500000 + (Math.random() * 2000000);
-        const progress = Math.random();
-        const status = progress > 0.9 ? 'completed' : (progress < 0.1 ? 'scheduled' : 'active');
+        const target = 1000000 + (Math.random() * 4000000);
+        const delivered = Math.floor(target * (0.4 + Math.random() * 0.6));
 
         currentBatch.set(ref, {
           id,
-          name: `${sponsor.name} ${['Promo Q1', 'Summer Sale', 'National Launch', 'Flash Offer'][i % 4]}`,
-          sponsorId,
+          name: `${sponsor.name} Campaign ${i + 1}`,
+          sponsorId: `demo-sp-${i % DEMO_SPONSORS.length}`,
           brandName: sponsor.name,
-          status,
-          targetImpressions: target,
-          deliveredImpressions: status === 'completed' ? target : Math.floor(target * progress),
+          status: 'active',
+          targetImpressions: Math.floor(target),
+          deliveredImpressions: Math.floor(delivered),
           targetPlaybacks: Math.floor(target / 2.5),
-          deliveredPlaybacks: status === 'completed' ? Math.floor(target / 2.5) : Math.floor((target * progress) / 2.5),
+          deliveredPlaybacks: Math.floor(delivered / 2.5),
           budget: (target / 1000) * 18.5,
-          startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          startDate: Date.now() - (60 * 24 * 60 * 60 * 1000),
+          endDate: Date.now() + (30 * 24 * 60 * 60 * 1000),
           targetRegions: DEMO_REGIONS.map(r => r.id),
-          priority: i % 5 === 0 ? 'high' : 'normal',
+          priority: 'normal',
           createdAt: Date.now()
         });
       }
       await currentBatch.commit();
 
-      progressCallback("Simulation Ready! Mode: DEMO ACTIVE.");
+      progressCallback("Simulación lista: Modo Demo Activo.");
   } catch (error) {
-      console.error("Critical error generating demo data:", error);
+      console.error("Error crítico en generación demo:", error);
       throw error;
   }
 }
@@ -164,18 +174,21 @@ export async function clearDemoDataset(progressCallback: (msg: string) => void) 
   const collections = ['demo_regions', 'demo_stores', 'demo_devices', 'demo_sponsors', 'demo_campaigns', 'demo_playbackLogs'];
   
   for (const colName of collections) {
-    progressCallback(`Purging ${colName}...`);
+    progressCallback(`Limpiando ${colName}...`);
     const snap = await getDocs(collection(db, colName));
-    const chunks = [];
-    for (let i = 0; i < snap.docs.length; i += 400) {
-        chunks.push(snap.docs.slice(i, i + 400));
-    }
     
-    for (const chunk of chunks) {
-        const batch = writeBatch(db);
-        chunk.forEach(d => batch.delete(d.ref));
-        await batch.commit();
+    let deleteBatch = writeBatch(db);
+    let count = 0;
+    
+    for (const doc of snap.docs) {
+        deleteBatch.delete(doc.ref);
+        count++;
+        if (count % 100 === 0) {
+            await deleteBatch.commit();
+            deleteBatch = writeBatch(db);
+        }
     }
+    await deleteBatch.commit();
   }
-  progressCallback("Demo environment wiped.");
+  progressCallback("Entorno demo purgado.");
 }

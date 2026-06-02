@@ -35,9 +35,17 @@ export function Settings() {
         setDemoLoading(true);
         try {
             await generateDemoDataset((msg) => setDemoProgress(msg));
-            toast({ title: "Dataset Created", description: "Demo mode is now populated with 1,800 simulated nodes." });
-        } catch (e) {
-            toast({ title: "Error", description: "Failed to generate demo data.", variant: "destructive" });
+            toast({ 
+                title: "Dataset Creado", 
+                description: "La simulación de 1 año ha sido inyectada correctamente." 
+            });
+        } catch (e: any) {
+            console.error("Demo Generation Error:", e);
+            toast({ 
+                title: "Error de Generación", 
+                description: e.message || "Fallo al escribir en Firestore. Revisa las reglas o tu conexión.", 
+                variant: "destructive" 
+            });
         } finally {
             setDemoLoading(false);
             setDemoProgress("");
@@ -45,13 +53,13 @@ export function Settings() {
     };
 
     const handleClearDemo = async () => {
-        if (!confirm("Are you sure? This will wipe ALL demo collections.")) return;
+        if (!confirm("¿Estás seguro? Esto borrará TODA la base de datos de simulación.")) return;
         setDemoLoading(true);
         try {
             await clearDemoDataset((msg) => setDemoProgress(msg));
-            toast({ title: "Dataset Wiped", description: "Demo environment is now empty." });
+            toast({ title: "Dataset Eliminado", description: "El entorno demo ha sido purgado." });
         } catch (e) {
-            toast({ title: "Error", description: "Failed to clear demo data.", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudo limpiar el entorno demo.", variant: "destructive" });
         } finally {
             setDemoLoading(false);
             setDemoProgress("");
@@ -143,7 +151,7 @@ export function Settings() {
             <div className="space-y-4 pt-4 border-t border-orange-500/10">
                 <div className="flex flex-col gap-2">
                     <Label className="text-xs uppercase font-black opacity-60">Dataset Management</Label>
-                    <p className="text-xs text-muted-foreground">Inject 1,800 stores and 10k screens to test platform scalability.</p>
+                    <p className="text-xs text-muted-foreground">Inject simulated nodes and screens to test platform scalability.</p>
                 </div>
                 <div className="flex gap-4">
                     <Button 
@@ -152,7 +160,7 @@ export function Settings() {
                         className="bg-orange-500 hover:bg-orange-600 text-white font-bold gap-2"
                     >
                         {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-                        {demoLoading ? "Seeding..." : "Initialize 1-Year Dataset"}
+                        {demoLoading ? "Procesando..." : "Initialize 1-Year Dataset"}
                     </Button>
                     <Button 
                         variant="outline" 
@@ -174,7 +182,6 @@ export function Settings() {
         </Card>
       </TabsContent>
 
-      {/* Rest of the TabsContent remain same... */}
       <TabsContent value="devices" className="space-y-4">
         <Card className="border-primary/10 shadow-lg">
           <CardHeader>
