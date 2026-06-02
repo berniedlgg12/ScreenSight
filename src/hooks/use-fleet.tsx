@@ -1,11 +1,12 @@
 'use client';
 
-import { createContext, useState, useEffect, ReactNode, useContext, useCallback } from 'react';
+import { createContext, useState, useEffect, ReactNode, useContext, useCallback, useMemo } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Device, Store, Sponsor, Region, Campaign, PlaybackLog } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useMode } from './use-mode';
+import { getVirtualDemoData } from '@/lib/demo-data-generator';
 
 interface FleetContextType {
   devices: Device[];
@@ -33,34 +34,45 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   const [now, setNow] = useState(Date.now());
   const { toast } = useToast();
 
-  // Helper to get collection name based on mode
-  const col = (name: string) => mode === 'demo' ? `demo_${name}` : name;
-
   useEffect(() => {
-    setLoading(true);
+    // CAPA VIRTUAL PARA MODO DEMO
+    if (mode === 'demo') {
+        setLoading(true);
+        const virtualData = getVirtualDemoData();
+        setRegions(virtualData.regions);
+        setSponsors(virtualData.sponsors);
+        setStores(virtualData.stores);
+        setDevices(virtualData.devices);
+        setCampaigns(virtualData.campaigns);
+        setPlaybackLogs([]); // Los logs se simulan en los componentes de analytics
+        setLoading(false);
+        return;
+    }
 
-    const unsubStores = onSnapshot(collection(db, col('stores')), (snapshot) => {
+    // MODO REAL - FIREBASE
+    setLoading(true);
+    const unsubStores = onSnapshot(collection(db, 'stores'), (snapshot) => {
       setStores(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store)));
     });
 
-    const unsubDevices = onSnapshot(query(collection(db, col('devices')), orderBy('name', 'asc')), (snapshot) => {
+    const unsubDevices = onSnapshot(query(collection(db, 'devices'), orderBy('name', 'asc')), (snapshot) => {
       setDevices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Device)));
       setLoading(false);
     });
 
-    const unsubSponsors = onSnapshot(collection(db, col('sponsors')), (snapshot) => {
+    const unsubSponsors = onSnapshot(collection(db, 'sponsors'), (snapshot) => {
       setSponsors(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sponsor)));
     });
 
-    const unsubRegions = onSnapshot(collection(db, col('regions')), (snapshot) => {
+    const unsubRegions = onSnapshot(collection(db, 'regions'), (snapshot) => {
       setRegions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)));
     });
 
-    const unsubCampaigns = onSnapshot(collection(db, col('campaigns')), (snapshot) => {
+    const unsubCampaigns = onSnapshot(collection(db, 'campaigns'), (snapshot) => {
       setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Campaign)));
     });
 
-    const unsubLogs = onSnapshot(query(collection(db, col('playbackLogs')), orderBy('timestamp', 'desc')), (snapshot) => {
+    const unsubLogs = onSnapshot(query(collection(db, 'playbackLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
       setPlaybackLogs(snapshot.docs.map(doc => {
         const data = doc.data();
         return { 
@@ -71,8 +83,6 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       }));
     });
 
-    const timer = setInterval(() => setNow(Date.now()), 5000);
-
     return () => {
       unsubStores();
       unsubDevices();
@@ -80,12 +90,14 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       unsubRegions();
       unsubCampaigns();
       unsubLogs();
-      clearInterval(timer);
     };
   }, [mode]);
 
+  const timer = setInterval(() => setNow(Date.now()), 5000);
+  useEffect(() => () => clearInterval(timer), []);
+
   const refreshData = useCallback(() => {
-    toast({ title: mode === 'demo' ? 'Demo Fleet Synced' : 'Live Fleet Synced', description: 'Telemetry updated.' });
+    toast({ title: mode === 'demo' ? 'Virtual Fleet Synced' : 'Live Fleet Synced', description: 'Telemetry updated.' });
   }, [toast, mode]);
 
   return (

@@ -34,16 +34,18 @@ export function Settings() {
     const handleGenerateDemo = async () => {
         setDemoLoading(true);
         try {
+            // Ya no escribimos en Firestore, solo simulamos el proceso
             await generateDemoDataset((msg) => setDemoProgress(msg));
             toast({ 
-                title: "Dataset Creado", 
-                description: "La simulación de 1 año ha sido inyectada correctamente." 
+                title: "Simulación Activada", 
+                description: "La capa de inteligencia nacional de 1 año está lista." 
             });
+            // Persistimos que el dataset fue "inicializado" en local
+            localStorage.setItem('screensight_demo_initialized', 'true');
         } catch (e: any) {
-            console.error("Demo Generation Error:", e);
             toast({ 
-                title: "Error de Generación", 
-                description: e.message || "Fallo al escribir en Firestore. Revisa las reglas o tu conexión.", 
+                title: "Error de Simulación", 
+                description: "Fallo al preparar el motor virtual.", 
                 variant: "destructive" 
             });
         } finally {
@@ -53,13 +55,13 @@ export function Settings() {
     };
 
     const handleClearDemo = async () => {
-        if (!confirm("¿Estás seguro? Esto borrará TODA la base de datos de simulación.")) return;
         setDemoLoading(true);
         try {
             await clearDemoDataset((msg) => setDemoProgress(msg));
-            toast({ title: "Dataset Eliminado", description: "El entorno demo ha sido purgado." });
+            localStorage.removeItem('screensight_demo_initialized');
+            toast({ title: "Dataset Purgado", description: "El entorno virtual ha sido reiniciado." });
         } catch (e) {
-            toast({ title: "Error", description: "No se pudo limpiar el entorno demo.", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudo limpiar el entorno.", variant: "destructive" });
         } finally {
             setDemoLoading(false);
             setDemoProgress("");
@@ -122,9 +124,9 @@ export function Settings() {
             <div className="flex items-center justify-between">
                 <div>
                     <CardTitle className="text-lg font-bold flex items-center gap-2 text-orange-500">
-                        <FlaskConical className="h-5 w-5" /> Simulation Environment
+                        <FlaskConical className="h-5 w-5" /> Virtual Simulation Engine
                     </CardTitle>
-                    <CardDescription>Toggle between Real-world operations and Demo simulation.</CardDescription>
+                    <CardDescription>Zero-Write high performance demo mode.</CardDescription>
                 </div>
                 <div className="flex items-center gap-4 bg-background/50 p-2 rounded-lg border border-orange-500/20">
                     <span className={`text-[10px] font-black uppercase ${mode === 'real' ? 'text-primary' : 'text-muted-foreground'}`}>Real Mode</span>
@@ -138,20 +140,20 @@ export function Settings() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-start gap-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-amber-500 shrink-0" />
+                <ShieldCheck className="h-6 w-6 text-amber-500 shrink-0" />
                 <div className="space-y-1">
-                    <p className="text-sm font-bold text-amber-600">Switching Data Modes</p>
+                    <p className="text-sm font-bold text-amber-600">Zero-Impact Demo</p>
                     <p className="text-xs text-amber-700/80 leading-relaxed">
-                        Demo Mode uses a separate set of collections in Firestore. Real operational data is <strong>never affected</strong>. 
-                        Changing this mode will trigger a full application reload to synchronize the correct data streams.
+                        This mode uses <strong>Virtual Data</strong> generated in memory. It does not write to Firestore and has zero cost. 
+                        Perfect for presentations where you need to show thousands of nodes without risk of performance lag.
                     </p>
                 </div>
             </div>
 
             <div className="space-y-4 pt-4 border-t border-orange-500/10">
                 <div className="flex flex-col gap-2">
-                    <Label className="text-xs uppercase font-black opacity-60">Dataset Management</Label>
-                    <p className="text-muted-foreground">Inject simulated nodes and screens to test platform scalability.</p>
+                    <Label className="text-xs uppercase font-black opacity-60">National Scale Projections</Label>
+                    <p className="text-muted-foreground">Toggle the high-fidelity simulator (1,800 Stores / 12,450 TVs).</p>
                 </div>
                 <div className="flex gap-4">
                     <Button 
@@ -160,7 +162,7 @@ export function Settings() {
                         className="bg-orange-500 hover:bg-orange-600 text-white font-bold gap-2"
                     >
                         {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-                        {demoLoading ? "Procesando..." : "Initialize 1-Year Dataset"}
+                        {demoLoading ? "Calculando..." : "Project 1-Year National Simulation"}
                     </Button>
                     <Button 
                         variant="outline" 
@@ -168,7 +170,7 @@ export function Settings() {
                         disabled={demoLoading}
                         className="border-destructive/20 text-destructive hover:bg-destructive/10 font-bold"
                     >
-                        Wipe Demo Collections
+                        Reset Virtual Environment
                     </Button>
                 </div>
                 {demoProgress && (
