@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useMode } from '@/hooks/use-mode';
+import { useFleet } from '@/hooks/use-fleet';
 
 const initialDateRange = {
     from: addDays(new Date(), -7),
@@ -23,8 +24,7 @@ const initialDateRange = {
 
 export function Analytics() {
   const { mode } = useMode();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
+  const { campaigns, stores, playbackLogs: fleetLogs, loading: fleetLoading } = useFleet();
   const [playbackLogs, setPlaybackLogs] = useState<PlaybackLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -37,18 +37,13 @@ export function Analytics() {
   });
   
   useEffect(() => {
+    if (mode === 'demo') {
+        setLoading(false);
+        return;
+    }
+
     setLoading(true);
-    const colPrefix = mode === 'demo' ? 'demo_' : '';
-
-    const unsubStores = onSnapshot(collection(db, `${colPrefix}stores`), (snapshot) => {
-      setStores(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store)));
-    });
-
-    const unsubCampaigns = onSnapshot(collection(db, `${colPrefix}campaigns`), (snapshot) => {
-      setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
-    });
-
-    const qLogs = query(collection(db, `${colPrefix}playbackLogs`), orderBy('timestamp', 'desc'), limit(1000));
+    const qLogs = query(collection(db, 'playbackLogs'), orderBy('timestamp', 'desc'), limit(1000));
     const unsubLogs = onSnapshot(qLogs, (snapshot) => {
       setPlaybackLogs(snapshot.docs.map(doc => {
         const data = doc.data();
@@ -61,15 +56,12 @@ export function Analytics() {
       setLoading(false);
     });
 
-    return () => {
-      unsubStores();
-      unsubCampaigns();
-      unsubLogs();
-    };
+    return () => unsubLogs();
   }, [mode]);
 
+  const activeLogs = mode === 'demo' ? [] : playbackLogs;
+
   const analyticsData = useMemo(() => {
-    // CAPA DE EXTRAPOLACIÓN PARA DEMO MODE
     if (mode === 'demo') {
         return {
             totalPlaybacks: 1245000,
@@ -91,8 +83,8 @@ export function Analytics() {
         };
     }
 
-    const startEvents = playbackLogs.filter(l => l.eventType === 'start');
-    const completeEvents = playbackLogs.filter(l => l.eventType === 'complete');
+    const startEvents = activeLogs.filter(l => l.eventType === 'start');
+    const completeEvents = activeLogs.filter(l => l.eventType === 'complete');
     const totalPlaybacks = startEvents.length;
     const completionRate = totalPlaybacks > 0 ? (completeEvents.length / totalPlaybacks) * 100 : 0;
     const totalWatchTimeHours = Math.floor(completeEvents.reduce((acc, log) => acc + (log.duration || 30), 0) / 3600);
@@ -110,9 +102,12 @@ export function Analytics() {
         completionRate,
         totalWatchTimeHours,
         playbacksOverTimeData: Object.entries(playbacksByDay).map(([date, count]) => ({ date, playbacks: count })),
-        campaignPlaybackData: []
+        campaignPlaybackData: campaigns.slice(0, 5).map(c => ({
+            name: c.name.split(' - ')[0],
+            playbacks: c.deliveredPlaybacks
+        }))
     };
-  }, [playbackLogs, mode]);
+  }, [activeLogs, mode, campaigns]);
 
   const handleDownloadReport = async () => {
       setIsGeneratingReport(true);
@@ -141,7 +136,7 @@ export function Analytics() {
       }
   };
 
-  if (loading) return (
+  if (loading || fleetLoading) return (
     <div className="flex flex-col items-center justify-center h-[80vh] gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="font-bold uppercase tracking-widest text-xs">Analyzing telemetry stream...</p>

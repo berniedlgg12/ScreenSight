@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { useState, useCallback, useMemo } from 'react';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Campaign, Region } from '@/lib/types';
+import type { Campaign } from '@/lib/types';
+import { useFleet } from '@/hooks/use-fleet';
 import {
   Table,
   TableBody,
@@ -48,37 +49,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useMode } from '@/hooks/use-mode';
 
 export function Campaigns() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [regions, setRegions] = useState<Region[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { campaigns, regions, loading } = useFleet();
+  const { mode } = useMode();
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [deletingCampaign, setDeletingCampaign] = useState<Campaign | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const unsubCampaigns = onSnapshot(query(collection(db, 'campaigns'), orderBy('createdAt', 'desc')), (snapshot) => {
-      setCampaigns(snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(),
-        startDate: (doc.data().startDate as any)?.toDate?.() || new Date(),
-        endDate: (doc.data().endDate as any)?.toDate?.() || new Date(),
-      } as Campaign)));
-      setLoading(false);
+  const sortedCampaigns = useMemo(() => {
+    return [...campaigns].sort((a, b) => {
+        const dateA = a.createdAt || 0;
+        const dateB = b.createdAt || 0;
+        return Number(dateB) - Number(dateA);
     });
-
-    const unsubRegions = onSnapshot(collection(db, 'regions'), (snapshot) => {
-      setRegions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)));
-    });
-
-    return () => {
-      unsubCampaigns();
-      unsubRegions();
-    };
-  }, []);
+  }, [campaigns]);
 
   const globalStats = useMemo(() => {
     const active = campaigns.filter(c => c.status === 'active');
@@ -102,7 +90,10 @@ export function Campaigns() {
   }, [regions]);
 
   const handleDeleteConfirm = async () => {
-    if (!deletingCampaign) return;
+    if (!deletingCampaign || mode === 'demo') {
+        if (mode === 'demo') toast({ title: 'Simulación', description: 'No se pueden borrar datos en modo Demo.' });
+        return;
+    }
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'campaigns', deletingCampaign.id));
@@ -122,7 +113,7 @@ export function Campaigns() {
             <h1 className="text-4xl font-black uppercase tracking-tighter">Campaigns</h1>
             <p className="text-muted-foreground font-medium">Manage sponsor delivery targets and fulfillment pacing.</p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)} className="font-bold">
+        <Button onClick={() => setCreateDialogOpen(true)} className="font-bold" disabled={mode === 'demo'}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Create Target
         </Button>
@@ -186,9 +177,12 @@ export function Campaigns() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.length > 0 ? (
-                  campaigns.map((campaign) => {
+                {sortedCampaigns.length > 0 ? (
+                  sortedCampaigns.map((campaign) => {
                     const progress = (campaign.targetPlaybacks > 0) ? (campaign.deliveredPlaybacks / campaign.targetPlaybacks) * 100 : 0;
+                    const startDate = campaign.startDate instanceof Date ? campaign.startDate : (campaign.startDate as any)?.toDate?.() || new Date();
+                    const endDate = campaign.endDate instanceof Date ? campaign.endDate : (campaign.endDate as any)?.toDate?.() || new Date();
+
                     return (
                         <TableRow key={campaign.id} className="hover:bg-muted/10 transition-colors">
                             <TableCell className="font-black text-primary">
@@ -220,7 +214,7 @@ export function Campaigns() {
                                 {(campaign.deliveredImpressions || 0).toLocaleString()} / {(campaign.targetImpressions || 0).toLocaleString()}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground font-medium">
-                                {format(new Date(campaign.startDate), 'MMM d')} - {format(new Date(campaign.endDate), 'MMM d, yyyy')}
+                                {format(startDate, 'MMM d')} - {format(endDate, 'MMM d, yyyy')}
                             </TableCell>
                             <TableCell className="text-right">
                               <DropdownMenu modal={false}>
@@ -233,6 +227,7 @@ export function Campaigns() {
                                   <DropdownMenuItem 
                                     onSelect={(e) => { e.preventDefault(); setEditingCampaign(campaign); }}
                                     className="font-medium"
+                                    disabled={mode === 'demo'}
                                   >
                                     <Edit className="mr-2 h-4 w-4" />
                                     <span>Edit Target</span>
@@ -240,6 +235,7 @@ export function Campaigns() {
                                   <DropdownMenuItem 
                                     onSelect={(e) => { e.preventDefault(); setDeletingCampaign(campaign); }}
                                     className="text-destructive focus:bg-destructive/10 focus:text-destructive font-bold"
+                                    disabled={mode === 'demo'}
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     <span>Delete</span>
