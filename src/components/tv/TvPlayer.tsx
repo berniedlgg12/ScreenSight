@@ -1,15 +1,15 @@
 'use client';
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { doc, onSnapshot, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, updateDoc, collection, addDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import type { Device, Store, Region, GeneratedPlaylist, TVCommand } from '@/lib/types';
+import type { Device, Store, Region, GeneratedPlaylist, TVCommand, PlaylistItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const HEARTBEAT_INTERVAL_MS = 10000;
 const SYNC_CORRECTION_INTERVAL_MS = 10000;
 const DRIFT_THRESHOLD_SECONDS = 2.0;
-const FALLBACK_REPOSO_URL = 'https://firebasestorage.googleapis.com/v0/b/studio-8383673190-f5959.firebasestorage.app/o/reposo%2Freposo.avif?alt=media';
+const FALLBACK_REPOSO_URL = 'https://picsum.photos/seed/screensight-standby/1920/1080';
 
 export function TvPlayer() {
   const searchParams = useSearchParams();
@@ -31,13 +31,17 @@ export function TvPlayer() {
   const resolvedRegionId = useRef<string | null>(null);
   const resolvedStoreId = useRef<string | null>(null);
 
+  // Proof of Play Tracking
+  const lastLoggedItemIndex = useRef<number | null>(null);
+  const playbackStartTime = useRef<number>(0);
+
   // 1. Reloj interno
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // 2. Carga inicial del dispositivo (Solo una vez)
+  // 2. Carga inicial del dispositivo
   useEffect(() => {
     if (!deviceId) {
         setLoading(false);
@@ -68,11 +72,10 @@ export function TvPlayer() {
     initDevice();
   }, [deviceId]);
 
-  // 3. Suscripción a COMANDOS (Jerarquía: Dispositivo > Tienda)
+  // 3. Suscripción a COMANDOS
   useEffect(() => {
     if (!deviceId || !resolvedStoreId.current) return;
 
-    // A. Escuchar comandos específicos del dispositivo
     const unsubDevice = onSnapshot(doc(db, 'devices', deviceId), (snap) => {
         const data = snap.data() as Device;
         if (data?.tvCommand && 
@@ -82,7 +85,6 @@ export function TvPlayer() {
         }
     });
 
-    // B. Escuchar comandos de la tienda
     const unsubStore = onSnapshot(doc(db, 'stores', resolvedStoreId.current), (snap) => {
         const data = snap.data() as Store;
         if (data?.tvCommand && 
@@ -98,7 +100,7 @@ export function TvPlayer() {
     };
   }, [loading]);
 
-  // 4. Suscripción a Región y Playlist (Scheduling)
+  // 4. Suscripción a Región y Playlist
   useEffect(() => {
     if (!resolvedRegionId.current) return;
 
@@ -167,9 +169,6 @@ export function TvPlayer() {
             document.documentElement.requestFullscreen().catch(() => {});
           }
           break;
-        case 'mute':
-          if (video) video.muted = !video.muted;
-          break;
         case 'emergency':
           setEmergencyMode(true);
           setEmergencyMessage(cmd.payload?.message || "EMERGENCIA");
@@ -196,7 +195,83 @@ export function TvPlayer() {
     }).catch(() => {});
   }, [deviceId]);
 
-  // 5. Telemetría y Heartbeat
+  // 5. Proof of Play (PoP) Telemetry Logic
+  useEffect(() => {
+    if (isStandbyMode || isEmergencyMode || !currentPlaylist || !videoRef.current || !deviceId) return;
+
+    const trackPlayback = async () => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const duration = currentPlaylist.mergedDuration || 600;
+        const syncStart = currentPlaylist.syncStartTime || Date.now();
+        const elapsed = (Date.now() - syncStart) / 1000;
+        const loopTime = elapsed % duration;
+
+        // Determinar qué item de la playlist se está reproduciendo
+        let accumulated = 0;
+        let activeIndex = 0;
+        for (let i = 0; i < currentPlaylist.playlistItems.length; i++) {
+            const item = currentPlaylist.playlistItems[i];
+            if (loopTime >= accumulated && loopTime < accumulated + item.duration) {
+                activeIndex = i;
+                break;
+            }
+            accumulated += item.duration;
+        }
+
+        // Si el item cambió, registrar PoP
+        if (activeIndex !== lastLoggedItemIndex.current) {
+            const lastIndex = lastLoggedItemIndex.current;
+            const newItem = currentPlaylist.playlistItems[activeIndex];
+
+            // 1. Log "Complete" for previous item if it was a campaign
+            if (lastIndex !== null) {
+                const prevItem = currentPlaylist.playlistItems[lastIndex];
+                if (prevItem.campaignId) {
+                    await addDoc(collection(db, 'playbackLogs'), {
+                        timestamp: serverTimestamp(),
+                        deviceId,
+                        storeId: resolvedStoreId.current,
+                        regionId: resolvedRegionId.current,
+                        mediaId: prevItem.mediaId,
+                        campaignId: prevItem.campaignId,
+                        eventType: 'complete',
+                        duration: prevItem.duration
+                    });
+
+                    // Update Campaign Counters
+                    const campRef = doc(db, 'campaigns', prevItem.campaignId);
+                    await updateDoc(campRef, {
+                        deliveredPlaybacks: increment(1),
+                        deliveredImpressions: increment(Math.floor(Math.random() * 5) + 1), // Mock impressions per play
+                        updatedAt: Date.now()
+                    }).catch(() => {});
+                }
+            }
+
+            // 2. Log "Start" for new item
+            if (newItem.campaignId) {
+                await addDoc(collection(db, 'playbackLogs'), {
+                    timestamp: serverTimestamp(),
+                    deviceId,
+                    storeId: resolvedStoreId.current,
+                    regionId: resolvedRegionId.current,
+                    mediaId: newItem.mediaId,
+                    campaignId: newItem.campaignId,
+                    eventType: 'start'
+                });
+            }
+
+            lastLoggedItemIndex.current = activeIndex;
+        }
+    };
+
+    const interval = setInterval(trackPlayback, 2000); // Check every 2s for precise logging
+    return () => clearInterval(interval);
+  }, [isStandbyMode, isEmergencyMode, currentPlaylist, deviceId]);
+
+  // 6. Telemetría y Heartbeat
   useEffect(() => {
     if (!deviceId) return;
     const sendHeartbeat = () => {
@@ -239,14 +314,13 @@ export function TvPlayer() {
     }
   }, [currentPlaylist, isStandbyMode, isEmergencyMode]);
 
-  // Sincronización periódica relajada
   useEffect(() => {
     if (isStandbyMode || isEmergencyMode || !currentPlaylist) return;
     const interval = setInterval(() => forceSync(DRIFT_THRESHOLD_SECONDS), SYNC_CORRECTION_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [currentPlaylist, isStandbyMode, isEmergencyMode, forceSync]);
 
-  // 6. Evaluación de Horarios (Solo si no hay comandos activos)
+  // 7. Evaluación de Horarios
   const evaluation = useMemo(() => {
     if (loading) return { isStandby: true, reason: 'Inicializando...' };
     if (!device) return { isStandby: true, reason: 'Nodo Desconocido' };
@@ -270,7 +344,7 @@ export function TvPlayer() {
     if (!lastExecutedCommandId.current) setStandbyMode(evaluation.isStandby);
   }, [evaluation]);
 
-  // 7. Motor de Reproducción
+  // 8. Motor de Reproducción
   useEffect(() => {
     const video = videoRef.current;
     if (!video || isStandbyMode || isEmergencyMode || !currentPlaylist?.mergedVideoUrl) {

@@ -33,24 +33,25 @@ export function Analytics() {
   useEffect(() => {
     setLoading(true);
 
-    // Real-time Stores
     const unsubStores = onSnapshot(collection(db, 'stores'), (snapshot) => {
       setStores(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store)));
     });
 
-    // Real-time Campaigns
     const unsubCampaigns = onSnapshot(collection(db, 'campaigns'), (snapshot) => {
       setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
     });
 
-    // Real-time Playback Logs (Limited to recent for performance)
-    const qLogs = query(collection(db, 'playbackLogs'), orderBy('timestamp', 'desc'), limit(5000));
+    // Real-time Playback Logs
+    const qLogs = query(collection(db, 'playbackLogs'), orderBy('timestamp', 'desc'), limit(1000));
     const unsubLogs = onSnapshot(qLogs, (snapshot) => {
-      setPlaybackLogs(snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date()
-      } as any)));
+      setPlaybackLogs(snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data,
+          timestamp: data.timestamp?.toDate() || new Date()
+        } as any;
+      }));
       setLoading(false);
     });
 
@@ -81,14 +82,15 @@ export function Analytics() {
   const analyticsData = useMemo(() => {
     const startEvents = filteredLogs.filter(l => l.eventType === 'start');
     const completeEvents = filteredLogs.filter(l => l.eventType === 'complete');
-    const interruptedEvents = filteredLogs.filter(l => l.eventType === 'interrupted');
+    
     const totalPlaybacks = startEvents.length;
     const completionRate = totalPlaybacks > 0 ? (completeEvents.length / totalPlaybacks) * 100 : 0;
     
-    // Watch Time: Complete = 30s (approx), Interrupted = actual progress if available, else 10s
-    const totalWatchTimeSeconds = (completeEvents.length * 30) + (interruptedEvents.length * 10);
+    // Watch Time: Sum of durations from complete logs
+    const totalWatchTimeSeconds = completeEvents.reduce((acc, log) => acc + (log.duration || 30), 0);
     const totalWatchTimeHours = Math.floor(totalWatchTimeSeconds / 3600);
 
+    // Timeline Data
     const playbacksByDay: { [key: string]: number } = {};
     startEvents.forEach(log => {
         const day = format(new Date(log.timestamp), 'MMM d');
@@ -98,18 +100,9 @@ export function Analytics() {
         .map(([date, count]) => ({ date, playbacks: count }))
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    const storeCounts: { [key: string]: number } = {};
-    startEvents.forEach(log => {
-        const storeName = stores.find(s => s.id === log.storeId)?.name || 'Unknown';
-        storeCounts[storeName] = (storeCounts[storeName] || 0) + 1;
-    });
-    const playbacksByStoreData = Object.entries(storeCounts)
-        .map(([name, count]) => ({ name, playbacks: count }))
-        .sort((a,b) => b.playbacks - a.playbacks)
-        .slice(0, 10);
-
+    // Campaign Data
     const campaignCounts: { [key: string]: number } = {};
-    startEvents.forEach(log => {
+    completeEvents.forEach(log => {
         const campaignName = campaigns.find(c => c.id === log.campaignId)?.name || 'Unknown';
         campaignCounts[campaignName] = (campaignCounts[campaignName] || 0) + 1;
     });
@@ -121,29 +114,30 @@ export function Analytics() {
     return {
         totalPlaybacks,
         completedPlaybacks: completeEvents.length,
-        interruptedPlaybacks: interruptedEvents.length,
+        interruptedPlaybacks: totalPlaybacks - completeEvents.length,
         completionRate,
         totalWatchTimeHours,
         playbacksOverTimeData,
-        playbacksByStoreData,
         campaignPlaybackData,
     };
   }, [filteredLogs, stores, campaigns]);
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[80vh] text-muted-foreground">
-        <Loader2 className="h-10 w-10 animate-spin mb-4" />
-        <p>Analyzing real-time playback logs from Firestore...</p>
+      <div className="flex flex-col items-center justify-center h-[80vh] text-muted-foreground gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="font-bold uppercase tracking-widest text-xs">Analyzing telemetry stream...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Proof of Play</h1>
-        <p className="text-muted-foreground hidden md:block">Real-time telemetry from connected Smart TVs.</p>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 bg-muted/10 min-h-screen">
+      <div className="flex items-center justify-between">
+        <div>
+            <h1 className="text-4xl font-black uppercase tracking-tighter">Proof of Play</h1>
+            <p className="text-muted-foreground font-medium">Real-time verification of campaign emission across the fleet.</p>
+        </div>
       </div>
       
       <AnalyticsFilters 
@@ -154,80 +148,80 @@ export function Analytics() {
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
+        <Card className="border-primary/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Runs</CardTitle>
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Runs</CardTitle>
             <PlayCircle className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData.totalPlaybacks.toLocaleString()}</div>
+            <div className="text-2xl font-black">{analyticsData.totalPlaybacks.toLocaleString()}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Completed</CardTitle>
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData.completedPlaybacks.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">{analyticsData.completionRate.toFixed(1)}% Rate</p>
+            <div className="text-2xl font-black text-emerald-500">{analyticsData.completedPlaybacks.toLocaleString()}</div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase">{analyticsData.completionRate.toFixed(1)}% Success</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Drops</CardTitle>
-            <XCircle className="h-4 w-4 text-destructive" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Drops</CardTitle>
+            <XCircle className="h-4 w-4 text-rose-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData.interruptedPlaybacks.toLocaleString()}</div>
+            <div className="text-2xl font-black text-rose-500">{analyticsData.interruptedPlaybacks.toLocaleString()}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Airtime</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Airtime</CardTitle>
+            <Clock className="h-4 w-4 text-sky-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData.totalWatchTimeHours.toLocaleString()} hrs</div>
+            <div className="text-2xl font-black">{analyticsData.totalWatchTimeHours.toLocaleString()} hrs</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/10 bg-primary/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Performance</CardTitle>
-            <BarChart2 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary">Performance</CardTitle>
+            <BarChart2 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData.completionRate.toFixed(1)}%</div>
+            <div className="text-2xl font-black text-primary">{analyticsData.completionRate.toFixed(1)}%</div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-            <CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border-primary/10">
+            <CardHeader><CardTitle className="text-sm font-black uppercase">Emission Timeline</CardTitle></CardHeader>
             <CardContent>
-            <ChartContainer config={{ playbacks: { label: 'Playbacks', color: 'hsl(var(--primary))' }}} className="h-[250px] w-full">
+            <ChartContainer config={{ playbacks: { label: 'Runs', color: 'hsl(var(--primary))' }}} className="h-[300px] w-full">
                 <ResponsiveContainer>
                     <LineChart data={analyticsData.playbacksOverTimeData}>
                         <YAxis hide />
-                        <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
+                        <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} />
                         <Tooltip content={<ChartTooltipContent indicator="dot" />} />
-                        <Line type="monotone" dataKey="playbacks" stroke="var(--color-playbacks)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="playbacks" stroke="var(--color-playbacks)" strokeWidth={3} dot={{ r: 4, fill: "var(--color-playbacks)" }} activeDot={{ r: 6 }} />
                     </LineChart>
                 </ResponsiveContainer>
             </ChartContainer>
             </CardContent>
         </Card>
-        <Card>
-            <CardHeader><CardTitle>Top Campaigns</CardTitle></CardHeader>
+        <Card className="border-primary/10">
+            <CardHeader><CardTitle className="text-sm font-black uppercase">Top Campaign Fulfillment</CardTitle></CardHeader>
             <CardContent>
-            <ChartContainer config={{ playbacks: { label: 'Playbacks', color: 'hsl(var(--primary))' }}} className="h-[250px] w-full">
+            <ChartContainer config={{ playbacks: { label: 'Plays', color: 'hsl(var(--primary))' }}} className="h-[300px] w-full">
                 <ResponsiveContainer>
                 <BarChart data={analyticsData.campaignPlaybackData} layout="vertical">
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" fontSize={10} width={100} tickLine={false} axisLine={false} />
+                    <YAxis dataKey="name" type="category" fontSize={10} width={120} tickLine={false} axisLine={false} />
                     <Tooltip content={<ChartTooltipContent indicator="dot" />} />
-                    <Bar dataKey="playbacks" fill="var(--color-playbacks)" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="playbacks" fill="var(--color-playbacks)" radius={[0, 4, 4, 0]} barSize={20} />
                 </BarChart>
                 </ResponsiveContainer>
             </ChartContainer>
