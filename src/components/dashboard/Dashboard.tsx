@@ -12,27 +12,35 @@ import Link from 'next/link';
 import { isDeviceOnline, getDeviceConnectionState } from '@/lib/utils';
 
 export function Dashboard() {
-  const { devices, campaigns, playbackLogs, loading, refreshData } = useFleet();
+  const { devices, campaigns, playbackLogs, regions, loading, refreshData } = useFleet();
 
   const stats = useMemo(() => {
-    // Online count based on new dynamic connection state (online or unstable)
     const online = devices.filter(d => isDeviceOnline(d.lastHeartbeat)).length;
     const activeAds = campaigns.filter(c => c.status === 'active').length;
     
-    const fillRate = campaigns.length > 0 ? 76.4 : 0;
+    // Revenue is the sum of all campaign budgets
+    const totalRevenue = campaigns.reduce((sum, c) => sum + (c.budget || 0), 0);
     
-    const totalGoal = campaigns.reduce((sum, c) => sum + (c.targetPlaybacks || 0), 0);
+    // Total impressions are summed from campaign delivery fields
+    const totalImpressions = campaigns.reduce((sum, c) => sum + (c.deliveredImpressions || 0), 0);
+    
+    // Overall Pacing
+    const totalGoal = campaigns.reduce((sum, c) => sum + (c.targetPlaybacks || 0), 1); // Avoid div by zero
     const totalDelivered = campaigns.reduce((sum, c) => sum + (c.deliveredPlaybacks || 0), 0);
-    const pacing = totalGoal > 0 ? (totalDelivered / totalGoal) * 100 : 0;
+    const pacing = (totalDelivered / totalGoal) * 100;
+
+    // Fill rate estimation (Active campaigns vs total capacity slots)
+    // Assuming a baseline capacity for demo purposes
+    const fillRate = Math.min(100, (activeAds * 15.5)); 
 
     return {
       totalScreens: devices.length,
       onlineScreens: online,
       activeCampaigns: activeAds,
-      networkFillRate: `${fillRate}%`,
+      networkFillRate: `${fillRate.toFixed(1)}%`,
       pacing: `${pacing.toFixed(1)}%`,
-      totalImpressions: playbackLogs.length * 2.5,
-      estimatedRevenue: campaigns.reduce((sum, c) => sum + (c.budget || 0), 0),
+      totalImpressions: totalImpressions || playbackLogs.length * 2,
+      estimatedRevenue: totalRevenue,
       uptime: devices.length > 0 ? `${((online / devices.length) * 100).toFixed(1)}%` : '0%'
     };
   }, [devices, campaigns, playbackLogs]);
@@ -42,14 +50,24 @@ export function Dashboard() {
     const unstable = devices.filter(d => getDeviceConnectionState(d.lastHeartbeat) === 'unstable').length;
     const offline = devices.filter(d => getDeviceConnectionState(d.lastHeartbeat) === 'offline').length;
 
-    const statusData = [
+    return [
       { name: 'Healthy', value: online },
       { name: 'Unstable', value: unstable },
       { name: 'Offline', value: offline }
     ];
-
-    return { statusData };
   }, [devices]);
+
+  const regionalStats = useMemo(() => {
+    return regions.map(r => {
+        const regionDevices = devices.filter(d => d.regionId === r.id);
+        const occupancy = Math.floor(Math.random() * 20) + 60; // Mock occupancy logic
+        return {
+            name: r.name,
+            count: regionDevices.length,
+            occupancy: `${occupancy}%`
+        };
+    }).sort((a,b) => b.count - a.count);
+  }, [regions, devices]);
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-[80vh] gap-4">
@@ -88,7 +106,7 @@ export function Dashboard() {
           <CardContent>
             <div className="space-y-6">
                 {campaigns.filter(c => c.status === 'active').slice(0, 5).map(campaign => {
-                    const progress = (campaign.deliveredPlaybacks / campaign.targetPlaybacks) * 100;
+                    const progress = (campaign.deliveredPlaybacks / (campaign.targetPlaybacks || 1)) * 100;
                     return (
                         <div key={campaign.id} className="space-y-2">
                             <div className="flex justify-between text-sm">
@@ -123,7 +141,7 @@ export function Dashboard() {
                 <ResponsiveContainer>
                     <PieChart>
                         <Pie
-                            data={chartData.statusData}
+                            data={chartData}
                             dataKey="value"
                             nameKey="name"
                             innerRadius={60}
@@ -164,15 +182,17 @@ export function Dashboard() {
             </CardHeader>
             <CardContent>
                 <div className="space-y-4 text-sm">
-                    {['Noroeste', 'Norte', 'Bajío', 'Occidente', 'Centro'].map(region => (
-                        <div key={region} className="flex items-center gap-4">
-                            <span className="w-24 font-medium">{region}</span>
+                    {regionalStats.length > 0 ? regionalStats.map(reg => (
+                        <div key={reg.name} className="flex items-center gap-4">
+                            <span className="w-24 font-bold uppercase text-[10px] tracking-tight">{reg.name}</span>
                             <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-primary/60" style={{ width: `${Math.floor(Math.random() * 40 + 40)}%` }} />
+                                <div className="h-full bg-primary/60" style={{ width: reg.occupancy }} />
                             </div>
-                            <span className="w-12 text-right font-mono font-bold">64%</span>
+                            <span className="w-16 text-right font-mono font-bold text-primary">{reg.count} TVs</span>
                         </div>
-                    ))}
+                    )) : (
+                        <p className="text-center py-10 text-muted-foreground italic">No regions initialized.</p>
+                    )}
                 </div>
             </CardContent>
         </Card>
@@ -198,8 +218,9 @@ export function Dashboard() {
                             </div>
                         ))
                     ) : (
-                        <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                            All systems nominal.
+                        <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg flex flex-col items-center gap-2">
+                            <RefreshCw className="h-6 w-6 opacity-20" />
+                            <p className="font-bold uppercase text-[10px] tracking-widest opacity-40">All systems nominal.</p>
                         </div>
                     )}
                 </div>

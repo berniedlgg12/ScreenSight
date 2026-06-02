@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Campaign, Region } from '@/lib/types';
@@ -80,6 +80,16 @@ export function Campaigns() {
     };
   }, []);
 
+  const globalStats = useMemo(() => {
+    const active = campaigns.filter(c => c.status === 'active');
+    const totalGoal = active.reduce((s, c) => s + (c.targetPlaybacks || 0), 0);
+    const totalDelivered = active.reduce((s, c) => s + (c.deliveredPlaybacks || 0), 0);
+    const pacing = totalGoal > 0 ? (totalDelivered / totalGoal) * 100 : 0;
+    const revenue = campaigns.reduce((s, c) => s + (c.budget || 0), 0);
+
+    return { active: active.length, pacing, revenue };
+  }, [campaigns]);
+
   const getPacingColor = (progress: number) => {
       if (progress < 40) return "bg-amber-500";
       if (progress < 90) return "bg-primary";
@@ -123,30 +133,30 @@ export function Campaigns() {
               <CardHeader className="pb-2">
                   <CardTitle className="text-xs font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
                       <Target className="h-4 w-4" /> Active Delivery
-                  </CardTitle>
+                  </Target>
               </CardHeader>
               <CardContent>
-                  <div className="text-2xl font-black">{campaigns.filter(c => c.status === 'active').length}</div>
+                  <div className="text-2xl font-black">{globalStats.active}</div>
               </CardContent>
           </Card>
           <Card className="bg-card">
               <CardHeader className="pb-2">
                   <CardTitle className="text-xs font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
                       <Activity className="h-4 w-4" /> Network Pacing
-                  </CardTitle>
+                  </Target>
               </CardHeader>
               <CardContent>
-                  <div className="text-2xl font-black">78.2%</div>
+                  <div className="text-2xl font-black">{globalStats.pacing.toFixed(1)}%</div>
               </CardContent>
           </Card>
            <Card className="bg-card">
               <CardHeader className="pb-2">
                   <CardTitle className="text-xs font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
                       <Megaphone className="h-4 w-4" /> Est. Revenue
-                  </CardTitle>
+                  </Target>
               </CardHeader>
               <CardContent>
-                  <div className="text-2xl font-black">${campaigns.reduce((s, c) => s + (c.budget || 0), 0).toLocaleString()}</div>
+                  <div className="text-2xl font-black">${globalStats.revenue.toLocaleString()}</div>
               </CardContent>
           </Card>
       </div>
@@ -178,7 +188,7 @@ export function Campaigns() {
               <TableBody>
                 {campaigns.length > 0 ? (
                   campaigns.map((campaign) => {
-                    const progress = campaign.targetPlaybacks > 0 ? (campaign.deliveredPlaybacks / campaign.targetPlaybacks) * 100 : 0;
+                    const progress = (campaign.targetPlaybacks > 0) ? (campaign.deliveredPlaybacks / campaign.targetPlaybacks) * 100 : 0;
                     return (
                         <TableRow key={campaign.id} className="hover:bg-muted/10 transition-colors">
                             <TableCell className="font-black text-primary">
