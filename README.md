@@ -1,83 +1,94 @@
-# 📺 ScreenSight — DOOH AdOps OS Technical Handbook (v3.0)
+# 📺 ScreenSight — DOOH AdOps OS Technical Handbook (v4.0)
 
 **ScreenSight** es un sistema de grado industrial para la gestión, monitoreo y distribución de redes de señalización digital (Digital Out-of-Home). Diseñado para operar sobre flotas masivas de Smart TVs distribuidas geográficamente con control granular por nodo (Store-Level Control).
 
 ---
 
-## 🏗️ 1. Arquitectura de Sistemas y Topología de Red
+## 🏗️ 1. Arquitectura de Sistemas y Capas de Datos
 
-El sistema utiliza una arquitectura de **Sincronización Asincrónica** sobre Firebase, eliminando la necesidad de WebSockets tradicionales mediante el uso de listeners reactivos de baja latencia.
+El sistema utiliza una arquitectura de **Sincronización Híbrida** capaz de operar en entornos reales y simulados.
 
 ### 🧩 Stack Tecnológico (Core Stack)
-- **Frontend Core**: Next.js 15 (App Router) bajo modelo de Server-Side Rendering para Dashboard y Client-Side Rendering para el Player.
-- **Data Layer**: Cloud Firestore (NoSQL) con persistencia offline habilitada.
+- **Frontend Core**: Next.js 15 (App Router) con soporte para Localización Multilingüe.
+- **Data Layer**: Cloud Firestore para producción y **Capa de Inteligencia Virtual** para simulaciones de alta escala.
 - **Media Engine**: Firebase Storage con CDN global para entrega de video 4K.
-- **Telemetry**: API Route especializada para ingestión de latidos (Heartbeats) y cálculo de drift.
+- **Telemetry**: Motor de latidos asíncronos con cálculo de drift y desfase de reloj.
 
 ---
 
-## 📐 2. Modelo de Datos y Jerarquía Operativa
+## 🚀 2. Motor de Simulación Virtual (Zero-Write)
 
-ScreenSight implementa una jerarquía de herencia de comandos para garantizar la resiliencia operativa.
+ScreenSight incluye un potente simulador diseñado para presentaciones de alta fidelidad sin coste operativo.
 
-### 🧬 Estructura de Entidades
-1. **Territory (Region)**: Entidad de planificación. Define horarios de operación, zonas horarias y la generación del loop regional (`GeneratedPlaylist`).
-2. **Retail Node (Store)**: Punto de control principal. Los comandos emitidos a `stores/{id}.tvCommand` tienen propagación atómica a todos los dispositivos vinculados.
-3. **Display (Device)**: El hardware final. Ejecuta un motor de playback persistente que prioriza comandos directos sobre los masivos.
+- **Escala Nacional**: Genera instantáneamente **1,800 Nodos de Venta** y **12,450 Pantallas** en memoria.
+- **Pulse Engine**: Un motor cíclico refresca los latidos de la flota virtual cada 15 segundos, manteniendo una distribución de salud realista:
+  - **🟢 92% ONLINE**: Operación nominal.
+  - **🟡 5% INESTABLE**: Simulación de jitter o saturación de red.
+  - **🔴 3% OFFLINE**: Desconexión total.
+- **Carga Predictiva**: Inyecta datos históricos de 1 año para analíticas de **Proof of Play** y cumplimiento de campañas (Pacing).
 
 ---
 
-## 📡 3. Protocolo de Telemetría (Real-Time Health Check)
+## 📡 3. Protocolo de Telemetría (Real-Time Health)
 
-La salud de la red se calcula dinámicamente en el cliente (Dashboard) para evitar escrituras costosas en la base de datos, basándose en la frescura de la señal de vida (`lastHeartbeat`).
+La salud de la red se calcula dinámicamente basándose en la frescura de la señal de vida (`lastHeartbeat`).
 
-### ⏱️ Ventanas de Tiempo de Conexión
 | Estado | Ventana (T = Ahora - lastHeartbeat) | Lógica de Sistema |
 | :--- | :--- | :--- |
-| **🟢 ONLINE** | T < 35 segundos | Operación nominal. Pulso de actividad visible en NOC. |
-| **🟡 INESTABLE** | 35s <= T < 60 segundos | Alerta preventiva. Indica saturación de ancho de banda o jitter. |
-| **⚪ OFFLINE** | T >= 60 segundos | Desconexión confirmada. Se inhabilitan mandos remotos. |
+| **🟢 ONLINE** | T < 35 segundos | Operación nominal. |
+| **🟡 INESTABLE** | 35s <= T < 60 segundos | Alerta preventiva de congestión. |
+| **⚪ OFFLINE** | T >= 60 segundos | Desconexión confirmada. |
 
 ---
 
-## 🎮 4. Centro de Mando de Operaciones (NOC)
+## 📊 4. Inteligencia y Auditoría (Proof of Play)
 
-El **Mando de Operaciones** implementa un ciclo de vida de comandos con acuse de recibo (ACK) binario. El estado de los controles en el panel se deriva directamente de la telemetría enviada por la TV (`currentPlaybackMode`), no de clics optimistas.
+El sistema implementa un robusto motor de analíticas con capacidades de segmentación granular.
 
-### 🔄 Ciclo de Vida del Comando
-1. **Emisión**: El Dashboard inyecta un objeto `tvCommand` con un `commandId` único (UUID/Timestamp).
-2. **Propagación**: Firestore distribuye el delta del documento en < 200ms.
-3. **Ejecución**: La TV procesa la instrucción basada en su ID para evitar re-ejecuciones en reconexión.
-4. **Confirmación (ACK)**: La TV actualiza su documento con `lastCommandStatus: "success"`.
+### 🔍 Filtrado Multidimensional
+Permite auditar la red por:
+- **Territorios (Regiones)**: Análisis geográfico del rendimiento.
+- **Retail Nodes (Sucursales)**: Diagnóstico individual por tienda.
+- **Advertisers & Campaigns**: Seguimiento de cumplimiento (Pacing) por marca.
+
+### 📄 Reportes PDF Inteligentes
+Generación de certificados de emisión que incluyen el **Audit Scope** (filtros aplicados) y métricas verificadas de impresiones y tiempo al aire, listos para auditorías externas.
+
+---
+
+## 🌍 5. Localización y Accesibilidad
+
+ScreenSight es una plataforma global con soporte nativo para los idiomas más hablados:
+- **English (US)**
+- **Español (ES)**
+- **Français (FR)**
+- **हिन्दी (Hindi)**
+- **中文 (Mandarin)**
+
+La configuración se gestiona en **Settings -> General** y se persiste de forma local para cada operador.
+
+---
+
+## 🎮 6. Centro de Mando de Operaciones (NOC)
+
+El **Mando de Operaciones** implementa un ciclo de vida de comandos con acuse de recibo (ACK).
 
 ### 🕹️ Comandos Críticos
-- **🟢 PLAY**: Re-calcula el offset regional basándose en el `syncStartTime` de la lista de reproducción actual.
-- **🟡 PAUSE**: Congela el buffer de renderizado de video de forma local.
-- **🔴 SLEEP**: Activa el modo de ahorro de energía mostrando el arte de marca (`standbyImage`).
-- **🔄 SYNC**: Realiza un "jump" en el `currentTime` del video para corregir el drift acumulado.
-- **⚠️ EMERGENCY**: Interrumpe la capa comercial para mostrar un overlay de alerta global inyectado por el NOC.
+- **🟢 PLAY / RESUME**: Activa el loop sincronizado regional.
+- **🟡 PAUSE**: Congela el buffer de renderizado localmente.
+- **🔴 SLEEP / STANDBY**: Muestra arte de marca y entra en ahorro de energía.
+- **⚠️ EMERGENCY**: Overlay de alerta global con mensaje inyectado desde el NOC.
+- **🔄 SYNC / RELOAD**: Corrige el drift de tiempo o refresca la aplicación.
 
 ---
 
-## 🎞️ 5. Algoritmo de Sincronización (The Sync Engine)
+## 🎞️ 7. Algoritmo de Sincronización (The Sync Engine)
 
-El motor de playback no depende de la descarga del video en tiempo real, sino del **Tiempo Maestro de Época**.
+El motor de playback utiliza el **Tiempo Maestro de Época** para garantizar que todas las TVs de una región vean el mismo frame al mismo tiempo.
 
-- **Drift Calculation**: El sistema compara el `currentTime` local contra `(Date.now() - syncStartTime) / 1000 % duration`.
+- **Interleaving**: Combina anuncios de campaña con rellenos de marca (Sponsor Maestro) automáticamente.
 - **Auto-Correction**: Si el drift excede los **2.0 segundos**, el player realiza un ajuste de fase silencioso.
-- **Persistence**: Ante un reinicio total, la TV identifica su nodo, descarga la receta de la playlist regional y se une al loop en el milisegundo exacto correspondiente a su posición geográfica.
-
----
-
-## 🛠️ 6. Guía de Inicialización (Bootstrapping)
-
-Para desplegar una nueva flota desde cero:
-
-1. **Infraestructura**: En **Territorios**, ejecute `Initialize AdOps`. Esto crea los clústeres regionales y el Sponsor Maestro para fillers.
-2. **Nodos**: Registre la sucursal en **Retail Nodes**. La región se asignará automáticamente mediante el mapeo de estados.
-3. **Hardware**: En **Displays**, registre la TV vinculándola a la tienda. Use la URL: `https://dlg.cc/tv?id=DEVICE_ID`.
-4. **Media**: Suba los spots en **Media Assets** y vincúlelos a un **Sponsor**.
-5. **Campaign**: Cree una **Campaign** definiendo las regiones objetivo.
+- **Persistence**: Ante un reinicio, la TV identifica su nodo, descarga la receta de la playlist regional y se une al loop en el milisegundo exacto.
 
 ---
 *ScreenSight AdOps OS — Arquitectura de alto rendimiento para señalización digital masiva.*
