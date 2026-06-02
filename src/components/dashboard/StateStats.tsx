@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 import type { Device, Store } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { Bar, BarChart, XAxis, YAxis, Tooltip } from 'recharts';
+import { ChartContainer, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface StateStatsProps {
@@ -91,7 +91,7 @@ export function StateStats({ devices, stores, loading }: StateStatsProps) {
                         <CardContent>
                             <Skeleton className="h-8 w-1/3" />
                         </CardContent>
-                    </Card>
+                    </div>
                 ))}
                 <Card className="col-span-1 md:col-span-4">
                     <CardHeader>
@@ -146,25 +146,23 @@ export function StateStats({ devices, stores, loading }: StateStatsProps) {
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                         <ResponsiveContainer>
-                            <BarChart data={statsByState} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
-                                <YAxis />
-                                <XAxis 
-                                    dataKey="state" 
-                                    tickLine={false}
-                                    tickMargin={10}
-                                    axisLine={false}
-                                    tickFormatter={(value) => value.slice(0, 3)}
-                                />
-                                <Tooltip
-                                    cursor={false}
-                                    content={<ChartTooltipContent indicator="dot" />}
-                                />
-                                <Bar dataKey="online" fill="var(--color-online)" stackId="a" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="offline" fill="var(--color-offline)" stackId="a" />
-                                <Bar dataKey="errors" fill="var(--color-errors)" stackId="a" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <BarChart data={statsByState} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+                            <YAxis />
+                            <XAxis 
+                                dataKey="state" 
+                                tickLine={false}
+                                tickMargin={10}
+                                axisLine={false}
+                                tickFormatter={(value) => value.slice(0, 3)}
+                            />
+                            <Tooltip
+                                cursor={false}
+                                content={<ChartTooltipContent indicator="dot" />}
+                            />
+                            <Bar dataKey="online" fill="var(--color-online)" stackId="a" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="offline" fill="var(--color-offline)" stackId="a" />
+                            <Bar dataKey="errors" fill="var(--color-errors)" stackId="a" radius={[4, 4, 0, 0]} />
+                        </BarChart>
                     </ChartContainer>
                 </CardContent>
             </Card>

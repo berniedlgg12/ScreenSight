@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Campaign, Store, PlaybackLog } from '@/lib/types';
-import { Bar, BarChart, Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { AnalyticsFilters } from './AnalyticsFilters';
 import { DateRange } from 'react-day-picker';
@@ -295,13 +295,11 @@ export function Analytics() {
             <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Verification Timeline</CardTitle></CardHeader>
             <CardContent>
                 <ChartContainer config={{ playbacks: { label: 'Runs', color: 'hsl(var(--primary))' }}} className="h-[300px] w-full">
-                    <ResponsiveContainer>
-                        <LineChart data={analyticsData.playbacksOverTimeData}>
-                            <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} />
-                            <Tooltip content={<ChartTooltipContent indicator="dot" />} />
-                            <Line type="stepAfter" dataKey="playbacks" stroke="var(--color-playbacks)" strokeWidth={4} dot={{ r: 4, fill: "hsl(var(--primary))" }} />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    <LineChart data={analyticsData.playbacksOverTimeData}>
+                        <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} />
+                        <Tooltip content={<ChartTooltipContent indicator="dot" />} />
+                        <Line type="stepAfter" dataKey="playbacks" stroke="var(--color-playbacks)" strokeWidth={4} dot={{ r: 4, fill: "hsl(var(--primary))" }} />
+                    </LineChart>
                 </ChartContainer>
             </CardContent>
         </Card>
@@ -309,14 +307,12 @@ export function Analytics() {
             <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Campaign Fulfillment (Top 5)</CardTitle></CardHeader>
             <CardContent>
                 <ChartContainer config={{ playbacks: { label: 'Plays', color: 'hsl(var(--primary))' }}} className="h-[300px] w-full">
-                    <ResponsiveContainer>
-                        <BarChart data={analyticsData.campaignPlaybackData} layout="vertical">
-                            <YAxis dataKey="name" type="category" fontSize={10} width={100} axisLine={false} tickLine={false} />
-                            <XAxis type="number" hide />
-                            <Tooltip content={<ChartTooltipContent indicator="dot" />} />
-                            <Bar dataKey="playbacks" fill="var(--color-playbacks)" radius={[0, 4, 4, 0]} barSize={20} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <BarChart data={analyticsData.campaignPlaybackData} layout="vertical">
+                        <YAxis dataKey="name" type="category" fontSize={10} width={100} axisLine={false} tickLine={false} />
+                        <XAxis type="number" hide />
+                        <Tooltip content={<ChartTooltipContent indicator="dot" />} />
+                        <Bar dataKey="playbacks" fill="var(--color-playbacks)" radius={[0, 4, 4, 0]} barSize={20} />
+                    </BarChart>
                 </ChartContainer>
             </CardContent>
         </Card>

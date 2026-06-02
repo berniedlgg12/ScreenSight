@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useFleet } from '@/hooks/use-fleet';
 import { KPICards } from './KPICards';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ResponsiveContainer, Cell, PieChart, Pie, Tooltip } from 'recharts';
+import { Cell, PieChart, Pie, Tooltip } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, TrendingUp, FlaskConical, MapPin, Store as StoreIcon, FilterX } from 'lucide-react';
@@ -308,23 +308,21 @@ export function Dashboard() {
           </CardHeader>
           <CardContent className="flex flex-col items-center">
              <ChartContainer config={{ value: { label: 'Units' }}} className="h-[250px] w-full">
-                <ResponsiveContainer>
-                    <PieChart>
-                        <Pie
-                            data={chartData}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius={60}
-                            outerRadius={80}
-                            paddingAngle={5}
-                        >
-                            <Cell fill="#10b981" />
-                            <Cell fill="#f59e0b" />
-                            <Cell fill="#ef4444" />
-                        </Pie>
-                        <Tooltip />
-                    </PieChart>
-                </ResponsiveContainer>
+                <PieChart>
+                    <Pie
+                        data={chartData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                    >
+                        <Cell fill="#10b981" />
+                        <Cell fill="#f59e0b" />
+                        <Cell fill="#ef4444" />
+                    </Pie>
+                    <Tooltip />
+                </PieChart>
              </ChartContainer>
              <div className="grid grid-cols-3 gap-4 w-full mt-4 text-center">
                  <div>
