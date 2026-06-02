@@ -43,24 +43,25 @@ export function StoreSelector({ stores, onSelect, selectedId }: StoreSelectorPro
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent 
+        className="w-80 p-0" 
+        align="end"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <Command filter={(value, search) => {
           if (value.toLowerCase().includes(search.toLowerCase())) return 1;
           return 0;
         }}>
           <CommandInput placeholder="ID o Nombre de Tienda..." className="font-medium" />
           <CommandList className="max-h-[300px]">
-            <CommandEmpty className="py-6 text-center text-xs font-bold uppercase opacity-50">No se encontró la sucursal.</CommandEmpty>
+            <CommandEmpty className="py-6 text-center text-xs font-bold uppercase opacity-50">
+              No se encontró la sucursal.
+            </CommandEmpty>
             <CommandGroup>
               {stores.map((store) => (
                 <CommandItem
                   key={store.id}
                   value={`${store.id} ${store.name}`}
-                  // EXTREMELY IMPORTANT: onPointerDown prevents Radix Popover from swallowing the click
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
                   onSelect={() => {
                     onSelect(store);
                     setOpen(false);
