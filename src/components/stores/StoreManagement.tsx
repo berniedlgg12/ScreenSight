@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useFleet } from '@/hooks/use-fleet';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Store as StoreIcon, PlusCircle, Search, Filter, Loader2, MoreHorizontal, Settings, Trash2 } from 'lucide-react';
+import { Store as StoreIcon, PlusCircle, Search, Filter, Loader2, MoreHorizontal, Settings, Trash2, MapPin, FilterX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateStoreDialog } from './CreateStoreDialog';
 import { EditStoreDialog } from './EditStoreDialog';
@@ -26,6 +26,7 @@ import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function StoreManagement() {
   const { stores, regions, devices, loading } = useFleet();
@@ -34,13 +35,20 @@ export function StoreManagement() {
   const [deletingStore, setDeletingStore] = useState<Store | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [search, setSearch] = useState('');
+  const [regionFilter, setRegionFilter] = useState<string>('all');
   const { toast } = useToast();
 
-  const filteredStores = stores.filter(s => 
-    s.name.toLowerCase().includes(search.toLowerCase()) || 
-    s.id.toLowerCase().includes(search.toLowerCase()) ||
-    s.city?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredStores = useMemo(() => {
+    return stores.filter(s => {
+        const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || 
+                             s.id.toLowerCase().includes(search.toLowerCase()) ||
+                             s.city?.toLowerCase().includes(search.toLowerCase());
+        
+        const matchesRegion = regionFilter === 'all' || s.regionId === regionFilter;
+        
+        return matchesSearch && matchesRegion;
+    });
+  }, [stores, search, regionFilter]);
 
   const handleDeleteConfirm = async () => {
     if (!deletingStore) return;
@@ -78,17 +86,50 @@ export function StoreManagement() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4 mb-4">
-          <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search by name, ID or city..." className="pl-8" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex flex-col md:flex-row items-center gap-4 bg-background border border-primary/10 p-3 rounded-2xl shadow-sm">
+          <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                  placeholder="Search by name, ID or city..." 
+                  className="pl-10 h-10 border-none bg-muted/20 shadow-none font-medium" 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)} 
+              />
           </div>
-          <Button variant="outline"><Filter className="mr-2 h-4 w-4" /> Filters</Button>
+          
+          <div className="h-8 w-px bg-primary/10 hidden md:block" />
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Territory:</span>
+              <Select value={regionFilter} onValueChange={setRegionFilter}>
+                  <SelectTrigger className="w-full md:w-[220px] h-10 font-bold bg-muted/20 border-none shadow-none">
+                      <SelectValue placeholder="All Territories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="all">National Coverage (All)</SelectItem>
+                      {regions.map(r => (
+                          <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
+          </div>
+
+          {(regionFilter !== 'all' || search) && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => { setRegionFilter('all'); setSearch(''); }} 
+                className="text-xs font-black uppercase text-rose-500 hover:bg-rose-500/10"
+              >
+                  <FilterX className="h-3 w-3 mr-2" /> Reset
+              </Button>
+          )}
       </div>
 
       <Card>
         <CardContent className="p-0">
-          {stores.length > 0 ? (
+          {filteredStores.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -103,7 +144,7 @@ export function StoreManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStores.map((store) => (
+                {filteredStores.slice(0, 100).map((store) => (
                   <TableRow key={store.id}>
                     <TableCell className="font-mono font-bold text-xs">{store.id}</TableCell>
                     <TableCell className="font-bold">{store.name}</TableCell>
@@ -113,19 +154,19 @@ export function StoreManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{regions.find(r => r.id === store.regionId)?.name || 'N/A'}</Badge>
+                      <Badge variant="outline" className="font-mono text-[9px] uppercase">{regions.find(r => r.id === store.regionId)?.name || 'N/A'}</Badge>
                     </TableCell>
-                    <TableCell>{devices.filter(d => d.storeId === store.id).length}</TableCell>
+                    <TableCell className="font-bold">{devices.filter(d => d.storeId === store.id).length}</TableCell>
                     <TableCell>{(store.dailyTraffic || 0).toLocaleString()}</TableCell>
                     <TableCell>
-                      <Badge className="uppercase text-[10px]" variant={store.status === 'active' ? 'default' : 'secondary'}>
+                      <Badge className="uppercase text-[10px] font-black" variant={store.status === 'active' ? 'default' : 'secondary'}>
                         {store.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                          <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setEditingStore(store); }}>
@@ -139,14 +180,21 @@ export function StoreManagement() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredStores.length > 100 && (
+                    <TableRow>
+                        <TableCell colSpan={8} className="text-center py-4 bg-muted/5">
+                            <span className="text-[10px] font-black uppercase text-muted-foreground">Showing first 100 of {filteredStores.length} nodes. Use region filter for precision.</span>
+                        </TableCell>
+                    </TableRow>
+                )}
               </TableBody>
             </Table>
           ) : (
             <div className="py-20 text-center flex flex-col items-center justify-center space-y-4">
                <StoreIcon className="h-12 w-12 text-muted-foreground/30" />
                <h3 className="text-lg font-bold">No stores registered</h3>
-               <p className="text-muted-foreground max-w-sm text-sm">Onboard your retail locations to start deploying TV screens and campaigns.</p>
-               <Button onClick={() => setCreateOpen(true)}>Register Your First Store</Button>
+               <p className="text-muted-foreground max-w-sm text-sm">No locations match your current search or filter criteria.</p>
+               <Button onClick={() => { setRegionFilter('all'); setSearch(''); }}>Clear All Filters</Button>
             </div>
           )}
         </CardContent>

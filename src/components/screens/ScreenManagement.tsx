@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useFleet } from '@/hooks/use-fleet';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Tv, RefreshCw, MoreHorizontal, Power, Link as LinkIcon, Loader2, Settings, Trash2 } from 'lucide-react';
+import { Tv, RefreshCw, MoreHorizontal, Power, Link as LinkIcon, Loader2, Settings, Trash2, Store as StoreIcon, FilterX } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CreateDeviceDialog } from './CreateDeviceDialog';
 import { EditScreenDialog } from '@/components/dashboard/EditScreenDialog';
@@ -25,6 +25,7 @@ import {
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { cn, isDeviceOnline, getDeviceConnectionState } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function ScreenManagement() {
   const { devices, stores, loading } = useFleet();
@@ -32,7 +33,13 @@ export function ScreenManagement() {
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [deletingDevice, setDeletingDevice] = useState<Device | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [storeFilter, setStoreFilter] = useState<string>('all');
   const { toast } = useToast();
+
+  const filteredDevices = useMemo(() => {
+    if (storeFilter === 'all') return devices;
+    return devices.filter(d => d.storeId === storeFilter);
+  }, [devices, storeFilter]);
 
   const handleCopyLink = async (deviceId: string) => {
     const link = `${window.location.origin}/tv?id=${deviceId}`;
@@ -86,9 +93,33 @@ export function ScreenManagement() {
         </div>
       </div>
 
+      <div className="bg-background border border-primary/10 p-3 rounded-2xl shadow-sm flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+              <StoreIcon className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Filter by Node:</span>
+              <Select value={storeFilter} onValueChange={setStoreFilter}>
+                  <SelectTrigger className="w-[280px] h-9 font-bold bg-muted/30 border-none shadow-none">
+                      <SelectValue placeholder="All Stores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="all">National Fleet (All Stores)</SelectItem>
+                      {stores.slice(0, 500).map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.name} ({s.id})</SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
+          </div>
+
+          {storeFilter !== 'all' && (
+              <Button variant="ghost" size="sm" onClick={() => setStoreFilter('all')} className="ml-auto text-xs font-black uppercase text-rose-500 hover:bg-rose-500/10">
+                  <FilterX className="h-3 w-3 mr-2" /> Clear Filter
+              </Button>
+          )}
+      </div>
+
       <Card>
         <CardContent className="p-0">
-          {devices.length > 0 ? (
+          {filteredDevices.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -102,7 +133,7 @@ export function ScreenManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {devices.map((device) => {
+                {filteredDevices.slice(0, 100).map((device) => {
                   const store = stores.find(s => s.id === device.storeId);
                   const connState = getDeviceConnectionState(device.lastHeartbeat);
                   
@@ -160,14 +191,21 @@ export function ScreenManagement() {
                     </TableRow>
                   );
                 })}
+                {filteredDevices.length > 100 && (
+                    <TableRow>
+                        <TableCell colSpan={7} className="text-center py-4 bg-muted/5">
+                            <span className="text-[10px] font-black uppercase text-muted-foreground">Showing first 100 of {filteredDevices.length} devices. Use filters for specific nodes.</span>
+                        </TableCell>
+                    </TableRow>
+                )}
               </TableBody>
             </Table>
           ) : (
             <div className="py-20 text-center flex flex-col items-center justify-center space-y-4">
                <Tv className="h-12 w-12 text-muted-foreground/30" />
-               <h3 className="text-lg font-bold">No devices registered</h3>
-               <p className="text-muted-foreground max-w-sm text-sm">Register your Smart TVs to start displaying synchronized content across your network.</p>
-               <Button onClick={() => setCreateOpen(true)}>Add Your First Device</Button>
+               <h3 className="text-lg font-bold">No devices found</h3>
+               <p className="text-muted-foreground max-w-sm text-sm">No screens match the current filter or are registered in the network.</p>
+               <Button onClick={() => setStoreFilter('all')}>Clear Filter</Button>
             </div>
           )}
         </CardContent>
