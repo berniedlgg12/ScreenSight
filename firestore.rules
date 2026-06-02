@@ -2,9 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permitir acceso a todas las colecciones principales y de demo para facilitar el prototipado.
-    // Esto resuelve el error "failed to generate demo data" al permitir la creación de colecciones demo_*.
-    
+    // Permitir acceso total para el prototipado de ScreenSight.
+    // Esto es crucial para permitir la creación dinámica de colecciones demo_*.
     match /{document=**} {
       allow read, write: if true;
     }
