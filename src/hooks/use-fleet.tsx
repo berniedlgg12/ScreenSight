@@ -3,7 +3,7 @@
 import { createContext, useState, useEffect, ReactNode, useContext, useCallback } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Device, Store, Sponsor, Region, Campaign, PlaybackLog } from '@/lib/types';
+import type { Device, Store, Sponsor, Region, Campaign, PlaybackLog, Media } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useMode } from './use-mode';
 import { getVirtualDemoData } from '@/lib/demo-data-generator';
@@ -15,6 +15,7 @@ interface FleetContextType {
   regions: Region[];
   campaigns: Campaign[];
   playbackLogs: PlaybackLog[];
+  media: Media[];
   loading: boolean;
   refreshData: () => void;
   now: number;
@@ -29,6 +30,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [media, setMedia] = useState<Media[]>([]);
   const [playbackLogs, setPlaybackLogs] = useState<PlaybackLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
@@ -44,6 +46,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
         setStores(virtualData.stores);
         setDevices(virtualData.devices);
         setCampaigns(virtualData.campaigns);
+        setMedia(virtualData.media);
         setPlaybackLogs([]); 
         setLoading(false);
         return;
@@ -72,6 +75,10 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Campaign)));
     });
 
+    const unsubMedia = onSnapshot(collection(db, 'media'), (snapshot) => {
+        setMedia(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Media)));
+    });
+
     const unsubLogs = onSnapshot(query(collection(db, 'playbackLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
       setPlaybackLogs(snapshot.docs.map(doc => {
         const data = doc.data();
@@ -89,12 +96,12 @@ export function FleetProvider({ children }: { children: ReactNode }) {
       unsubSponsors();
       unsubRegions();
       unsubCampaigns();
+      unsubMedia();
       unsubLogs();
     };
   }, [mode]);
 
   // MOTOR DE PULSO VIRTUAL (PULSE ENGINE)
-  // Mantiene los semáforos estables refrescando los latidos virtuales relativo al tiempo actual
   useEffect(() => {
     if (mode !== 'demo' || loading) return;
 
@@ -103,13 +110,12 @@ export function FleetProvider({ children }: { children: ReactNode }) {
             const healthTag = device.tags?.[0]; 
             let offset = 0;
             
-            // Re-calculamos un offset aleatorio pero dentro del rango para cada categoría
             if (healthTag === 'h-online') {
-                offset = Math.floor(Math.random() * 25000); // Mantiene Verde (< 35s)
+                offset = Math.floor(Math.random() * 25000); 
             } else if (healthTag === 'h-unstable') {
-                offset = 40000 + Math.floor(Math.random() * 15000); // Mantiene Ámbar (40s - 55s)
+                offset = 40000 + Math.floor(Math.random() * 15000); 
             } else {
-                return device; // Offline (Rojo) se queda igual (> 60s)
+                return device; 
             }
 
             return {
@@ -117,7 +123,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
                 lastHeartbeat: Date.now() - offset
             };
         }));
-    }, 10000); // Pulso cada 10 segundos
+    }, 15000);
 
     return () => clearInterval(pulse);
   }, [mode, loading]);
@@ -132,7 +138,7 @@ export function FleetProvider({ children }: { children: ReactNode }) {
   }, [toast, mode]);
 
   return (
-    <FleetContext.Provider value={{ devices, stores, sponsors, regions, campaigns, playbackLogs, loading, refreshData, now }}>
+    <FleetContext.Provider value={{ devices, stores, sponsors, regions, campaigns, playbackLogs, media, loading, refreshData, now }}>
       {children}
     </FleetContext.Provider>
   );

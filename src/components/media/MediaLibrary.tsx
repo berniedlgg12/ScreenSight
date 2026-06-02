@@ -39,6 +39,8 @@ import {
 import { EditMediaDialog } from './EditMediaDialog';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useFleet } from '@/hooks/use-fleet';
+import { useMode } from '@/hooks/use-mode';
 
 const formatDuration = (seconds: number | undefined) => {
   if (seconds === undefined || isNaN(seconds) || seconds < 0) return '0:00';
@@ -56,39 +58,15 @@ const formatDuration = (seconds: number | undefined) => {
 };
 
 export function MediaLibrary() {
+  const { media: mediaLibrary, sponsors, loading } = useFleet();
+  const { mode } = useMode();
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isUploadOpen, setUploadOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  
-  const [mediaLibrary, setMediaLibrary] = useState<Media[]>([]);
-  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
-  
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  
-  useEffect(() => {
-      const q = query(collection(db, 'media'));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-          const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Media));
-          setMediaLibrary(items.sort((a,b) => {
-              const dateA = typeof a.createdAt === 'number' ? a.createdAt : (a.createdAt as any)?.toDate?.()?.getTime() || 0;
-              const dateB = typeof b.createdAt === 'number' ? b.createdAt : (b.createdAt as any)?.toDate?.()?.getTime() || 0;
-              return dateB - dateA;
-          }));
-          setLoading(false);
-      });
-      return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'sponsors'), (snap) => {
-        setSponsors(snap.docs.map(d => ({ id: d.id, ...d.data() } as Sponsor)));
-    });
-    return () => unsub();
-  }, []);
 
   const handlePreview = (video: Media) => {
     setSelectedMedia(video);
@@ -192,7 +170,7 @@ export function MediaLibrary() {
                     <TableBody>
                     {mediaLibrary.length > 0 ? (
                         mediaLibrary.map((item) => {
-                          const isInternal = item.sponsorId === 'coppel-internal';
+                          const isInternal = item.sponsorId === 'coppel-internal' || item.sponsorId === 'demo-sp-23';
                           return (
                             <TableRow key={item.id} className={cn("hover:bg-muted/5 transition-colors", isInternal && "bg-primary/5 hover:bg-primary/10")}>
                                 <TableCell className="font-bold text-primary">
